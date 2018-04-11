@@ -1,11 +1,14 @@
 
 # IdentityChain Indy-API
 
+Indy REST API Agent built with python using the libindy python wrapper.
+
 ## Dependencies
 
 - Python
 - Pipenv
 - Targeted Python Version (w/ virtualenv): Python 3.6
+- libindy ([How to Install](https://github.com/hyperledger/indy-sdk#how-to-install))
 
 ## Quickstart
 ```
