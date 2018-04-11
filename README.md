@@ -31,3 +31,5 @@ python manage.py runserver
 # Try localhost:8000/api and localhost:8000/api/overview
 ```
 
+NOTE: libindy creates a `.indy_client` directory in your home directory to store data
+
