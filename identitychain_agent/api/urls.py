@@ -1,4 +1,4 @@
-
+from typing import List, Any
 
 from django.urls import path, include
 from rest_framework import routers
@@ -14,11 +14,12 @@ router.register(r'claimdef', ClaimDefViewSet)
 router.register(r'claim',ClaimViewSet)
 router.register(r'claimoffer',ClaimOfferViewSet)
 router.register(r'connection', IndyConnectionViewSet)
+router.register(r'proof', ProofViewSet)
 
 schema_view = get_schema_view(title='IdentityChain API', renderer_classes=[OpenAPIRenderer, SwaggerUIRenderer])
 
 
-urlpatterns = [
+urlpatterns: List[Any] = [
     path(r'docs/', schema_view),
     path('', include(router.urls)),
 ]

@@ -62,3 +62,8 @@ class ClaimOfferViewSet(viewsets.ModelViewSet):
 class IndyConnectionViewSet(viewsets.ModelViewSet):
     queryset = IndyConnection.objects.all()
     serializer_class = IndyConnectionSerializer
+
+class ProofViewSet(viewsets.ModelViewSet):
+    queryset = Proof.objects.all()
+    serializer_class = ProofSerializer
+

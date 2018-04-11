@@ -42,3 +42,10 @@ class IndyConnectionSerializer(serializers.ModelSerializer):
         model = IndyConnection
         fields = '__all__'
 
+
+class ProofSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Proof
+        fields = '__all__'
+
+

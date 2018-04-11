@@ -59,5 +59,13 @@ class IndyConnection(models.Model):
         ordering = ['created']
 
 
+class Proof(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
+    proof_obj= models.TextField()
+
+    class Meta:
+        ordering = ['created']
+
+
 
 
