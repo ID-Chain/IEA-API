@@ -41,7 +41,7 @@ class EndpointSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=['anon', 'auth'], default='anon')
     target = serializers.CharField(required=True)
     ref = serializers.CharField(required=True)
-    message = serializers.CharField(required=True)
+    message = serializers.JSONField(required=True)
 
     def update(self, instance, validated_data):
         raise NotImplementedError("Do not change a message after receiving")

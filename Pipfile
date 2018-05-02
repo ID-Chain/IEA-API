@@ -10,7 +10,8 @@ django-rest-swagger = "*"
 coreapi = "*"
 pygments = "*"
 markdown = "*"
-"python3-indy" = "*"
+"python3-indy" = {path = "./python3-libindy"}
+#"python3-indy" = "*"
 asgiref = "*"
 
 [dev-packages]

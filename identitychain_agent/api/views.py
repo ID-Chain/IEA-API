@@ -9,7 +9,7 @@ from asgiref.sync import async_to_sync
 from api.serializers import *
 from api.models import *
 from api.permissions import *
-from indy import error, signus, ledger, pool, anoncreds, pairwise, crypto, wallet as IndyWallet
+from indy import error, did, ledger, pool, anoncreds, pairwise, crypto, wallet as IndyWallet
 
 pool_handle = async_to_sync(pool.open_pool_ledger)(settings.POOL_NAME, None)
 
@@ -58,11 +58,16 @@ class WalletViewSet(viewsets.ModelViewSet):
 
         instance.open();
         pairwises = async_to_sync(pairwise.list_pairwise)(instance.handle)
+        dids = async_to_sync(did.list_my_dids_with_meta)(instance.handle)
         instance.close()
+
+        print(pairwises)
+        print(dids)
 
         serializer = self.get_serializer(instance)
         data = serializer.data
-        data['pairwise'] = pairwises
+        data['pairwise'] = json.loads(pairwises)
+        data['dids'] = json.loads(dids)
         return Response(data)
 
 
@@ -79,15 +84,16 @@ class ConnectionOfferViewSet(viewsets.ModelViewSet):
         (issueDID, isNew) = IssueDID.objects.get_or_create(wallet=wallet)
         if issueDID.did == '':
             did_json = json.dumps({'seed': wallet.seed}) if wallet.seed else None
-            (did, key) = async_to_sync(signus.create_and_store_my_did)(wallet_handle, did_json)
-            issueDID.did = did
+            (issueDid, key) = async_to_sync(did.create_and_store_my_did)(wallet_handle, did_json)
+            issueDID.did = issueDid
             issueDID.save()
 
-        (from_to_did, from_to_key) = async_to_sync(signus.create_and_store_my_did)(wallet_handle, "{}")
-        endpoint = request.scheme + '://' + request.get_host() + reverse('api-root') + '/endpoint'
-        async_to_sync(signus.set_endpoint_for_did)(wallet_handle, from_to_did, endpoint, from_to_key)
+        (from_to_did, from_to_key) = async_to_sync(did.create_and_store_my_did)(wallet_handle, "{}")
+        endpoint = request.scheme + '://' + request.get_host() + reverse('api-root') + 'endpoint/'
+        async_to_sync(did.set_endpoint_for_did)(wallet_handle, from_to_did, endpoint, from_to_key)
         nym_request = async_to_sync(ledger.build_nym_request)(issueDID.did, from_to_did, from_to_key, None, None)
         async_to_sync(ledger.sign_and_submit_request)(pool_handle, wallet_handle, issueDID.did, nym_request)
+        wallet.close()
         serializer.save(did=from_to_did)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -109,28 +115,29 @@ class ConnectionViewSet(viewsets.GenericViewSet):
         print(nonce)
 
         wallet_handle = wallet.open()
-        (to_from_did, to_from_key) = async_to_sync(signus.create_and_store_my_did)(wallet_handle, "{}")
-        from_to_verkey = async_to_sync(signus.key_for_did)(pool_handle, wallet_handle, from_to_did)
+        (to_from_did, to_from_key) = async_to_sync(did.create_and_store_my_did)(wallet_handle, "{}")
+        from_to_verkey = async_to_sync(did.key_for_did)(pool_handle, wallet_handle, from_to_did)
         connection_response = json.dumps({
             'did': to_from_did,
             'verkey': to_from_key,
             'nonce': nonce
         }).encode('utf-8')
-        anoncrypted_conn_response = async_to_sync(crypto.crypto_box_seal)(from_to_verkey, connection_response)
+        anoncrypted_conn_response = async_to_sync(crypto.anon_crypt)(from_to_verkey, connection_response)
         payload = json.dumps({
             'type': 'anon',
             'target': 'accept_connection',
             'ref': nonce,
             'message': anoncrypted_conn_response
         })
-        endpoint = async_to_sync(signus.get_endpoint_for_did)(wallet_handle, pool_handle, from_to_did)
+        (endpoint, _) = async_to_sync(did.get_endpoint_for_did)(wallet_handle, pool_handle, from_to_did)
+        wallet.close()
         print(connection_response)
         print(anoncrypted_conn_response)
         print(endpoint)
-        requests.post(endpoint, data=payload, headers={'content-type': 'application/json'})
-        wallet.close()
+        req = requests.post(endpoint, data=payload, headers={'content-type': 'application/json'})
+        print(req.content)
 
-        return Response(status=status.HTTP_200_OK)
+        return Response(status=req.status_code)
 
 
 class EndpointViewSet(viewsets.GenericViewSet):
@@ -151,7 +158,7 @@ class EndpointViewSet(viewsets.GenericViewSet):
         print(target)
         print(ref)
         print(message)
-        if not ref == 'accept_connection':
+        if not target == 'accept_connection':
             raise NotImplementedError()
         connection_offer = ConnectionOffer.objects.get(pk=ref)
         wallet = connection_offer.wallet
@@ -161,20 +168,28 @@ class EndpointViewSet(viewsets.GenericViewSet):
         print(wallet)
         print(from_to_did)
         print(nonce)
+
         wallet_handle = wallet.open()
-        from_to_key = async_to_sync(signus.key_for_local_did)(wallet_handle, from_to_did)
-        conn_response = async_to_sync(crypto.crypto_box_seal_open)(wallet_handle, from_to_key, message)
+        from_to_key = async_to_sync(did.key_for_local_did)(wallet_handle, from_to_did)
+        conn_response = async_to_sync(crypto.anon_decrypt)(wallet_handle, from_to_key, message)
+        conn_response = json.loads(conn_response.decode('utf-8'))
+        print(conn_response)
         to_from_did = conn_response['did']
         to_from_key = conn_response['verkey']
-        print(conn_response)
         print(to_from_did)
         print(to_from_key)
         if not nonce == conn_response['nonce']:
+            wallet.close()
             return Response('nonce mismatch', status=status.HTTP_400_BAD_REQUEST)
         issueDID = IssueDID.objects.get(wallet=wallet)
         nym_request = async_to_sync(ledger.build_nym_request)(issueDID.did, to_from_did, to_from_key, None, None)
         async_to_sync(ledger.sign_and_submit_request)(pool_handle, wallet_handle, issueDID.did, nym_request)
-        async_to_sync(pairwise.create_pairwise)(wallet_handle, to_from_did, from_to_did, None)
+        # FIXME: investigate why this throws a Indy WalletNotFoundError
+        # async_to_sync(pairwise.create_pairwise)(wallet_handle, to_from_did, from_to_did, None)
+        async_to_sync(did.store_their_did)(wallet_handle, json.dumps({
+            'did': to_from_did,
+            'verkey': to_from_key
+        }))
         wallet.close()
 
         return Response(status=status.HTTP_200_OK)
