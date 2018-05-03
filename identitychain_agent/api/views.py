@@ -59,6 +59,16 @@ class WalletViewSet(viewsets.ModelViewSet):
         instance.open();
         pairwises = async_to_sync(pairwise.list_pairwise)(instance.handle)
         dids = async_to_sync(did.list_my_dids_with_meta)(instance.handle)
+        pairwises = json.loads(pairwises)
+        dids = json.loads(dids)
+        # FIXME: investigate why this raises Indy CommonInvalidState Error
+        # documentation states that this points to an error in the library
+        for d in dids:
+            try:
+                endpoint, _ = async_to_sync(did.get_endpoint_for_did)(instance.handle, pool_handle, d['did'])
+                d['endpoint'] = endpoint
+            except error.IndyError as err:
+                print(err)
         instance.close()
 
         print(pairwises)
@@ -66,8 +76,8 @@ class WalletViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(instance)
         data = serializer.data
-        data['pairwise'] = json.loads(pairwises)
-        data['dids'] = json.loads(dids)
+        data['pairwise'] = pairwises
+        data['dids'] = dids
         return Response(data)
 
 
