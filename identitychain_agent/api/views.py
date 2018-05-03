@@ -97,7 +97,7 @@ class ConnectionOfferViewSet(viewsets.ModelViewSet):
 
         (issueDID, isNew) = IssueDID.objects.get_or_create(wallet=wallet)
         if issueDID.did == '':
-            did_json = json.dumps({'seed': wallet.seed}) if wallet.seed else None
+            did_json = json.dumps({'seed': wallet.seed}) if wallet.seed else "{}"
             (issueDid, key) = async_to_sync(did.create_and_store_my_did)(wallet_handle, did_json)
             issueDID.did = issueDid
             issueDID.save()
