@@ -32,6 +32,7 @@ class Wallet(models.Model):
     def close(self):
         if self.handle:
             async_to_sync(IndyWallet.close_wallet)(self.handle)
+            self.handle = ''
 
     class Meta:
         ordering = ['created']
