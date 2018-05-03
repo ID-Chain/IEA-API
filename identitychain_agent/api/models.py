@@ -48,6 +48,7 @@ class ConnectionOffer(models.Model):
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE)
     # DID associated with issuer of connection offer
     did = models.TextField(blank=True)
+    endpoint = models.TextField(blank=True)
     nonce = models.TextField(primary_key=True, default=hex_uuid4, editable=False)
 
 

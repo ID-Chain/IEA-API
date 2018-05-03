@@ -21,14 +21,26 @@ class WalletSerializer(serializers.ModelSerializer):
 
 
 class ConnectionOfferSerializer(serializers.ModelSerializer):
+    endpoint = serializers.CharField(required=False)
+    did = serializers.ReadOnlyField()
+
     class Meta:
         model = ConnectionOffer
-        fields = ('wallet', 'did', 'nonce')
+        fields = ('wallet', 'did', 'endpoint', 'nonce')
+
+
+class ConnectionOfferMessageSerializer(serializers.ModelSerializer):
+    endpoint = serializers.CharField(required=False)
+
+    class Meta:
+        model = ConnectionOffer
+        fields = ('wallet', 'did', 'endpoint', 'nonce')
 
 
 class ConnectionSerializer(serializers.Serializer):
     wallet = serializers.PrimaryKeyRelatedField(many=False, queryset=Wallet.objects.all())
-    connection_offer = ConnectionOfferSerializer(required=True)
+    endpoint = serializers.CharField(required=False)
+    connection_offer = ConnectionOfferMessageSerializer(required=True)
 
     def update(self, instance, validated_data):
         raise NotImplementedError()

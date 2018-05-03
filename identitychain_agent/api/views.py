@@ -79,6 +79,10 @@ class ConnectionOfferViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         wallet = serializer.validated_data['wallet']
+        endpoint = serializer.validated_data.get('endpoint', request.scheme + '://' +
+                                                    request.get_host() + reverse('api-root') +
+                                                    'endpoint/')
+        print(endpoint)
         wallet_handle = wallet.open()
 
         (issueDID, isNew) = IssueDID.objects.get_or_create(wallet=wallet)
@@ -89,7 +93,6 @@ class ConnectionOfferViewSet(viewsets.ModelViewSet):
             issueDID.save()
 
         (from_to_did, from_to_key) = async_to_sync(did.create_and_store_my_did)(wallet_handle, "{}")
-        endpoint = request.scheme + '://' + request.get_host() + reverse('api-root') + 'endpoint/'
         async_to_sync(did.set_endpoint_for_did)(wallet_handle, from_to_did, endpoint, from_to_key)
         nym_request = async_to_sync(ledger.build_nym_request)(issueDID.did, from_to_did, from_to_key, None, None)
         async_to_sync(ledger.sign_and_submit_request)(pool_handle, wallet_handle, issueDID.did, nym_request)
@@ -106,7 +109,11 @@ class ConnectionViewSet(viewsets.GenericViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         wallet = serializer.validated_data['wallet']
+        my_endpoint = serializer.validated_data.get('endpoint', request.scheme + '://' +
+                                                    request.get_host() + reverse('api-root') +
+                                                    'endpoint/')
         connection_offer = serializer.validated_data['connection_offer']
+        print(connection_offer)
         from_to_did = connection_offer['did']
         # FIXME: nonce somehow disappears in serializer..???
         # nonce = connection_offer['nonce']
@@ -116,9 +123,12 @@ class ConnectionViewSet(viewsets.GenericViewSet):
 
         wallet_handle = wallet.open()
         (to_from_did, to_from_key) = async_to_sync(did.create_and_store_my_did)(wallet_handle, "{}")
+        async_to_sync(did.set_endpoint_for_did)(wallet_handle, to_from_did, my_endpoint, to_from_key)
+        async_to_sync(did.store_their_did)(wallet_handle, json.dumps({'did': from_to_did}))
         from_to_verkey = async_to_sync(did.key_for_did)(pool_handle, wallet_handle, from_to_did)
         connection_response = json.dumps({
             'did': to_from_did,
+            #'endpoint': my_endpoint,
             'verkey': to_from_key,
             'nonce': nonce
         }).encode('utf-8')
