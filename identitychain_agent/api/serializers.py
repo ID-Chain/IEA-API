@@ -21,7 +21,7 @@ class WalletSerializer(serializers.ModelSerializer):
 
 
 class ConnectionOfferSerializer(serializers.ModelSerializer):
-    endpoint = serializers.CharField(required=False)
+    endpoint = serializers.CharField(write_only=True, required=False)
     did = serializers.ReadOnlyField()
 
     class Meta:
@@ -53,6 +53,7 @@ class EndpointSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=['anon', 'auth'], default='anon')
     target = serializers.CharField(required=True)
     ref = serializers.CharField(required=True)
+    signature = serializers.CharField(required=True)
     message = serializers.JSONField(required=True)
 
     def update(self, instance, validated_data):

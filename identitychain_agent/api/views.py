@@ -56,20 +56,22 @@ class WalletViewSet(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
 
-        instance.open();
-        pairwises = async_to_sync(pairwise.list_pairwise)(instance.handle)
-        dids = async_to_sync(did.list_my_dids_with_meta)(instance.handle)
-        pairwises = json.loads(pairwises)
-        dids = json.loads(dids)
-        # FIXME: investigate why this raises Indy CommonInvalidState Error
-        # documentation states that this points to an error in the library
-        for d in dids:
-            try:
-                endpoint, _ = async_to_sync(did.get_endpoint_for_did)(instance.handle, pool_handle, d['did'])
-                d['endpoint'] = endpoint
-            except error.IndyError as err:
-                print(err)
-        instance.close()
+        try:
+            instance.open();
+            pairwises = async_to_sync(pairwise.list_pairwise)(instance.handle)
+            dids = async_to_sync(did.list_my_dids_with_meta)(instance.handle)
+            pairwises = json.loads(pairwises)
+            dids = json.loads(dids)
+            # FIXME: investigate why this raises Indy CommonInvalidState Error
+            # documentation states that this points to an error in the library
+            for d in dids:
+                try:
+                    endpoint, _ = async_to_sync(did.get_endpoint_for_did)(instance.handle, pool_handle, d['did'])
+                    d['endpoint'] = endpoint
+                except error.IndyError as err:
+                    print(err)
+        finally:
+            instance.close()
 
         print(pairwises)
         print(dids)
@@ -90,23 +92,28 @@ class ConnectionOfferViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         wallet = serializer.validated_data['wallet']
         endpoint = serializer.validated_data.get('endpoint', request.scheme + '://' +
-                                                    request.get_host() + reverse('api-root') +
-                                                    'endpoint/')
+                                                 request.get_host() + reverse('api-root') +
+                                                 'endpoint/')
         print(endpoint)
-        wallet_handle = wallet.open()
+        try:
+            wallet_handle = wallet.open()
+            (issueDID, isNew) = IssueDID.objects.get_or_create(wallet=wallet)
+            if issueDID.did == '':
+                did_json = json.dumps({'seed': wallet.seed}) if wallet.seed else "{}"
+                (issueDid, key) = async_to_sync(did.create_and_store_my_did)(wallet_handle, did_json)
+                issueDID.did = issueDid
+                issueDID.save()
+            (from_to_did, from_to_key) = async_to_sync(did.create_and_store_my_did)(wallet_handle, "{}")
+            async_to_sync(did.set_endpoint_for_did)(wallet_handle, from_to_did, endpoint, from_to_key)
+            nym_request = async_to_sync(ledger.build_nym_request)(issueDID.did, from_to_did, from_to_key, None, None)
+            nym_result = async_to_sync(ledger.sign_and_submit_request)(pool_handle,
+                                                                       wallet_handle,
+                                                                       issueDID.did,
+                                                                       nym_request)
+            print(nym_result)
+        finally:
+            wallet.close()
 
-        (issueDID, isNew) = IssueDID.objects.get_or_create(wallet=wallet)
-        if issueDID.did == '':
-            did_json = json.dumps({'seed': wallet.seed}) if wallet.seed else "{}"
-            (issueDid, key) = async_to_sync(did.create_and_store_my_did)(wallet_handle, did_json)
-            issueDID.did = issueDid
-            issueDID.save()
-
-        (from_to_did, from_to_key) = async_to_sync(did.create_and_store_my_did)(wallet_handle, "{}")
-        async_to_sync(did.set_endpoint_for_did)(wallet_handle, from_to_did, endpoint, from_to_key)
-        nym_request = async_to_sync(ledger.build_nym_request)(issueDID.did, from_to_did, from_to_key, None, None)
-        async_to_sync(ledger.sign_and_submit_request)(pool_handle, wallet_handle, issueDID.did, nym_request)
-        wallet.close()
         serializer.save(did=from_to_did)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -131,32 +138,44 @@ class ConnectionViewSet(viewsets.GenericViewSet):
         print(from_to_did)
         print(nonce)
 
-        wallet_handle = wallet.open()
-        (to_from_did, to_from_key) = async_to_sync(did.create_and_store_my_did)(wallet_handle, "{}")
-        async_to_sync(did.set_endpoint_for_did)(wallet_handle, to_from_did, my_endpoint, to_from_key)
-        async_to_sync(did.store_their_did)(wallet_handle, json.dumps({'did': from_to_did}))
-        from_to_verkey = async_to_sync(did.key_for_did)(pool_handle, wallet_handle, from_to_did)
-        connection_response = json.dumps({
-            'did': to_from_did,
-            #'endpoint': my_endpoint,
-            'verkey': to_from_key,
-            'nonce': nonce
-        }).encode('utf-8')
-        anoncrypted_conn_response = async_to_sync(crypto.anon_crypt)(from_to_verkey, connection_response)
-        payload = json.dumps({
-            'type': 'anon',
-            'target': 'accept_connection',
-            'ref': nonce,
-            'message': anoncrypted_conn_response
-        })
-        (endpoint, _) = async_to_sync(did.get_endpoint_for_did)(wallet_handle, pool_handle, from_to_did)
-        wallet.close()
+        try:
+            wallet_handle = wallet.open()
+            (to_from_did, to_from_key) = async_to_sync(did.create_and_store_my_did)(wallet_handle, "{}")
+            async_to_sync(did.set_endpoint_for_did)(wallet_handle, to_from_did, my_endpoint, to_from_key)
+            from_to_verkey = async_to_sync(did.key_for_did)(pool_handle, wallet_handle, from_to_did)
+
+            connection_response = json.dumps({
+                'did': to_from_did,
+                'verkey': to_from_key,
+                'nonce': nonce
+            }).encode('utf-8')
+            anoncrypted_conn_response = async_to_sync(crypto.anon_crypt)(from_to_verkey, connection_response)
+            # FIXME: signing is unstable
+            # signature = (async_to_sync(crypto.crypto_sign)(wallet_handle, to_from_key, connection_response)).decode('latin-1')
+            signature = '-1'
+            print(anoncrypted_conn_response)
+            print(signature)
+
+            payload = json.dumps({
+                'type': 'anon',
+                'target': 'accept_connection',
+                'ref': nonce,
+                'signature': signature,
+                'message': anoncrypted_conn_response
+            })
+            (endpoint, _) = async_to_sync(did.get_endpoint_for_did)(wallet_handle, pool_handle, from_to_did)
+            async_to_sync(did.store_their_did)(wallet_handle, json.dumps({
+                'did': from_to_did,
+                'verkey': from_to_verkey
+            }))
+        finally:
+            wallet.close()
+
         print(connection_response)
         print(anoncrypted_conn_response)
         print(endpoint)
         req = requests.post(endpoint, data=payload, headers={'content-type': 'application/json'})
         print(req.content)
-
         return Response(status=req.status_code)
 
 
@@ -173,13 +192,16 @@ class EndpointViewSet(viewsets.GenericViewSet):
         crypto_type = serializer.validated_data['type']
         target = serializer.validated_data['target']
         ref = serializer.validated_data['ref']
+        # signature = serializer.validated_data['signature'].encode('latin-1')
         message = serializer.validated_data['message']
         print(crypto_type)
         print(target)
         print(ref)
+        # print(signature)
         print(message)
         if not target == 'accept_connection':
             raise NotImplementedError()
+
         connection_offer = ConnectionOffer.objects.get(pk=ref)
         wallet = connection_offer.wallet
         from_to_did = connection_offer.did
@@ -189,29 +211,41 @@ class EndpointViewSet(viewsets.GenericViewSet):
         print(from_to_did)
         print(nonce)
 
-        wallet_handle = wallet.open()
-        from_to_key = async_to_sync(did.key_for_local_did)(wallet_handle, from_to_did)
-        conn_response = async_to_sync(crypto.anon_decrypt)(wallet_handle, from_to_key, message)
-        conn_response = json.loads(conn_response.decode('utf-8'))
-        print(conn_response)
-        to_from_did = conn_response['did']
-        to_from_key = conn_response['verkey']
-        print(to_from_did)
-        print(to_from_key)
-        if not nonce == conn_response['nonce']:
-            wallet.close()
-            return Response('nonce mismatch', status=status.HTTP_400_BAD_REQUEST)
-        issueDID = IssueDID.objects.get(wallet=wallet)
-        nym_request = async_to_sync(ledger.build_nym_request)(issueDID.did, to_from_did, to_from_key, None, None)
-        async_to_sync(ledger.sign_and_submit_request)(pool_handle, wallet_handle, issueDID.did, nym_request)
-        # FIXME: investigate why this throws a Indy WalletNotFoundError
-        # async_to_sync(pairwise.create_pairwise)(wallet_handle, to_from_did, from_to_did, None)
-        async_to_sync(did.store_their_did)(wallet_handle, json.dumps({
-            'did': to_from_did,
-            'verkey': to_from_key
-        }))
-        wallet.close()
+        try:
+            wallet_handle = wallet.open()
+            from_to_key = async_to_sync(did.key_for_local_did)(wallet_handle, from_to_did)
+            conn_response_raw = async_to_sync(crypto.anon_decrypt)(wallet_handle, from_to_key, message)
+            conn_response = json.loads(conn_response_raw.decode('utf-8'))
+            print(conn_response)
 
+            to_from_did = conn_response['did']
+            to_from_key = conn_response['verkey']
+            print(to_from_did)
+            print(to_from_key)
+            print('nonce matches: ' + nonce == conn_response)
+            if not nonce == conn_response['nonce']:
+                return Response('nonce mismatch', status=status.HTTP_400_BAD_REQUEST)
+
+            # FIXME: unstable signature verification (Indy ErrorCode.CommonInvalidStructure)
+            #signature_is_valid = async_to_sync(crypto.crypto_verify)(to_from_key, conn_response_raw, signature)
+            #print('signature is valid: ' + signature)
+            #if not signature_is_valid:
+            #    return Response('invalid signature', status=status.HTTP_400_BAD_REQUEST)
+
+            issue_did = IssueDID.objects.get(wallet=wallet)
+            nym_request = async_to_sync(ledger.build_nym_request)(issue_did.did, to_from_did, to_from_key, None, None)
+            nym_result = async_to_sync(ledger.sign_and_submit_request)(pool_handle, wallet_handle, issue_did.did, nym_request)
+            print(nym_result)
+            # FIXME: investigate why this throws a Indy WalletNotFoundError
+            # async_to_sync(pairwise.create_pairwise)(wallet_handle, to_from_did, from_to_did, None)
+            async_to_sync(did.store_their_did)(wallet_handle, json.dumps({
+                'did': to_from_did,
+                'verkey': to_from_key
+            }))
+        finally:
+            wallet.close()
+
+        connection_offer.delete()
         return Response(status=status.HTTP_200_OK)
 
 
@@ -238,4 +272,3 @@ class ClaimOfferViewSet(viewsets.ModelViewSet):
 class ProofViewSet(viewsets.ModelViewSet):
     queryset = Proof.objects.all()
     serializer_class = ProofSerializer
-
