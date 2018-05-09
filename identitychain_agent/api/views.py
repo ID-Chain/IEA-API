@@ -163,7 +163,11 @@ class ConnectionViewSet(viewsets.GenericViewSet):
                 'signature': signature,
                 'message': anoncrypted_conn_response
             })
-            (endpoint, _) = async_to_sync(did.get_endpoint_for_did)(wallet_handle, pool_handle, from_to_did)
+            try:
+                (endpoint, _) = async_to_sync(did.get_endpoint_for_did)(wallet_handle, pool_handle, from_to_did)
+            except error.IndyError as err:
+                endpoint = request.scheme + '://' + request.get_host() + reverse('api-root') + 'endpoint/'
+
             async_to_sync(did.store_their_did)(wallet_handle, json.dumps({
                 'did': from_to_did,
                 'verkey': from_to_verkey
