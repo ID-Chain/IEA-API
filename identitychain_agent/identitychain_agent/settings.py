@@ -137,6 +137,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+LOGIN_URL = 'rest_framework:login'
+LOGOUT_URL = 'rest_framework:logout'
+
 # Indy Pool related configuration
 
 # Name to use for the pool
