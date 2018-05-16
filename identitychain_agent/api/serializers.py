@@ -92,3 +92,8 @@ class ProofSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class RevocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Revocation
+        fields = '__all__'
+

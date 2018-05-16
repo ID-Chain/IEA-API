@@ -276,3 +276,9 @@ class ClaimOfferViewSet(viewsets.ModelViewSet):
 class ProofViewSet(viewsets.ModelViewSet):
     queryset = Proof.objects.all()
     serializer_class = ProofSerializer
+
+
+class RevocationViewSet(viewsets.ModelViewSet):
+    queryset = Revocation.objects.all()
+    serializer_class = RevocationSerializer
+
