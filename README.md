@@ -1,6 +1,8 @@
 
 # IdentityChain Indy-API
 
+## NOTE: This is the old version and only partially implemented, written using python and django.
+
 Indy REST API Agent built with python using the libindy python wrapper.
 
 ## Dependencies
