@@ -3,6 +3,7 @@ info:
   description: 'IdentityChain Agent REST API'
   title: IdentityChain API
   version: '0.1.5'
+basePath: /api
 schemes:
   - http
 securityDefinitions:
@@ -28,7 +29,7 @@ parameters:
     required: true
 
 definitions:
-  user_post:
+  users_post:
     type: object
     properties:
       username:
@@ -38,14 +39,14 @@ definitions:
     required:
       - username
       - password
-  user_put:
+  users_put:
     type: object
     properties:
       username:
         type: string
       password:
         type: string
-  wallet_post:
+  wallets_post:
     type: object
     properties:
       name:
@@ -70,7 +71,7 @@ definitions:
       xtype:
         description: '(Optional) Type of the wallet. A default config will be used if none is provided.'
         type: string
-  credential_post:
+  credentials_post:
     type: object
     properties:
       wallet:
@@ -82,7 +83,7 @@ definitions:
     required:
       - wallet
       - encryptedCredential
-  credentialissue_post:
+  credentials_issue_post:
     type: object
     properties:
       wallet:
@@ -97,7 +98,7 @@ definitions:
     required:
       - wallet
       - encryptedCredentialRequest
-  credentialdef_post:
+  credentials_definitions_post:
     type: object
     properties:
       wallet:
@@ -112,7 +113,7 @@ definitions:
     required:
     - wallet
     - schemaId
-  credentialoffer_post:
+  credentials_offers_post:
     type: object
     properties:
       wallet:
@@ -128,7 +129,7 @@ definitions:
       - wallet
       - recipientDid
       - credDefId
-  credentialrequest_post:
+  credentials_requests_post:
     type: object
     properties:
       wallet:
@@ -140,7 +141,7 @@ definitions:
     required:
       - wallet
       - encryptedCredentialOffer
-  connectionoffer_post:
+  connections_offers_post:
     type: object
     properties:
       wallet:
@@ -159,7 +160,7 @@ definitions:
           - TRUST_ANCHOR
     required:
       - wallet
-  connection_post:
+  connections_post:
     type: object
     properties:
       wallet:
@@ -174,7 +175,7 @@ definitions:
     required:
       - wallet
       - connectionOffer
-  proofrequest_post:
+  proofs_requests_post:
     type: object
     properties:
       wallet:
@@ -205,7 +206,7 @@ definitions:
       - wallet
       - recipientDid
       - proofRequest
-  proof_post:
+  proofs_post:
     type: object
     properties:
       wallet:
@@ -222,7 +223,7 @@ definitions:
     required:
       - wallet
       - encryptedProofRequest
-  proofverification_post:
+  proofs_verifications_post:
     type: object
     properties:
       wallet:
@@ -234,7 +235,7 @@ definitions:
     required:
       - wallet
       - encryptedProof
-  schema_post:
+  schemas_post:
     type: object
     properties:
       wallet:
@@ -258,7 +259,7 @@ definitions:
       - attrNames
 
 paths:
-  /api/credential/:
+  /credentials:
     get:
       summary: List all credentials of specific wallet (UNTESTED ENDPOINT)
       description: List all credentials of specific wallet (UNTESTED ENDPOINT)
@@ -296,7 +297,9 @@ paths:
         '200':
           description: ''
       tags:
-        - credential
+        - Credentials
+      security:
+        - basic
     post:
       summary: Store a credential
       description: Store a credential
@@ -304,13 +307,15 @@ paths:
       - in: body
         name: data
         schema:
-          $ref: '#/definitions/credential_post'
+          $ref: '#/definitions/credentials_post'
       responses:
         '201':
           description: ''
       tags:
-      - credential
-  /api/credential/{id}/:
+        - Credentials
+      security:
+        - basic
+  /credentials/{id}:
     parameters:
     - description: A unique string value identifying this credential.
       in: path
@@ -329,8 +334,10 @@ paths:
         '200':
           description: ''
       tags:
-        - credential
-  /api/credentialissue/:
+        - Credentials
+      security:
+        - basic
+  /credentials/issue:
       post:
         summary: Issue a credential
         description: Issue a credential
@@ -338,13 +345,15 @@ paths:
         - in: body
           name: data
           schema:
-            $ref: '#/definitions/credentialissue_post'
+            $ref: '#/definitions/credentials_issue_post'
         responses:
           '201':
             description: ''
         tags:
-          - credentialissue
-  /api/credentialdef/:
+          - Credentials
+        security:
+          - basic
+  /credentials/definitions:
     get:
       summary: List credential definitions of wallet
       description: List credential definitions of wallet
@@ -357,7 +366,9 @@ paths:
         '200':
           description: ''
       tags:
-        - credentialdef
+        - Credentials
+      security:
+        - basic
     post:
       summary: Create a credential definition
       description: Create a credential definition
@@ -365,13 +376,15 @@ paths:
       - in: body
         name: data
         schema:
-          $ref: '#/definitions/credentialdef_post'
+          $ref: '#/definitions/credentials_definitions_post'
       responses:
         '201':
           description: ''
       tags:
-        - credentialdef
-  /api/credentialdef/{creddef}/:
+        - Credentials
+      security:
+        - basic
+  /credentials/definitions/{creddef}:
     parameters:
       - description: A unique string value identifying this credential definition.
         in: path
@@ -390,7 +403,9 @@ paths:
         '200':
           description: ''
       tags:
-      - credentialdef
+        - Credentials
+      security:
+        - basic
     delete:
       summary: Delete a credential definition
       description: Delete a credential definition
@@ -398,8 +413,10 @@ paths:
         '204':
           description: ''
       tags:
-      - credentialdef
-  /api/credentialoffer/:
+        - Credentials
+      security:
+        - basic
+  /credentials/offers:
     post:
       summary: Create a credential offer
       description: Create a credential offer
@@ -407,13 +424,15 @@ paths:
         - in: body
           name: data
           schema:
-            $ref: '#/definitions/credentialoffer_post'
+            $ref: '#/definitions/credentials_offers_post'
       responses:
         '201':
           description: ''
       tags:
-        - credentialoffer
-  /api/credentialrequest/:
+        - Credentials
+      security:
+        - basic
+  /credentials/requests:
     post:
       summary: Accept credential offer and create credential request
       description: Accept credential offer and create credential request
@@ -421,13 +440,15 @@ paths:
       - in: body
         name: data
         schema:
-          $ref: '#/definitions/credentialrequest_post'
+          $ref: '#/definitions/credentials_requests_post'
       responses:
         '201':
           description: ''
       tags:
-        - credentialrequest
-  /api/connectionoffer/:
+        - Credentials
+      security:
+        - basic
+  /connections/offers:
     post:
       summary: Create a new connection offer
       description: Create a new connection offer
@@ -435,13 +456,15 @@ paths:
       - in: body
         name: data
         schema:
-          $ref: '#/definitions/connectionoffer_post'
+          $ref: '#/definitions/connections_offers_post'
       responses:
         '201':
           description: ''
       tags:
-        - connection
-  /api/connection/:
+        - Connections
+      security:
+        - basic
+  /connections:
     post:
       summary: Accept a connection offer
       description: Accept a connection offer
@@ -449,13 +472,15 @@ paths:
       - in: body
         name: data
         schema:
-          $ref: '#/definitions/connection_post'
+          $ref: '#/definitions/connections_post'
       responses:
         '200':
           description: 'Success'
       tags:
-      - connection
-  /api/proofrequest/:
+      - Connections
+      security:
+        - basic
+  /proofs/requests:
     post:
       summary: Create a proof request
       description: Create a proof request
@@ -464,13 +489,15 @@ paths:
         name: data
         type: object
         schema:
-          $ref: '#/definitions/proofrequest_post'
+          $ref: '#/definitions/proofs_requests_post'
       responses:
         '201':
           description: ''
       tags:
-        - proof
-  /api/proof/:
+        - Proofs
+      security:
+        - basic
+  /proofs:
     post:
       summary: Create a Proof
       description: Create a Proof
@@ -479,13 +506,15 @@ paths:
         name: data
         type: object
         schema:
-          $ref: '#/definitions/proof_post'
+          $ref: '#/definitions/proofs_post'
       responses:
         '201':
           description: ''
       tags:
-        - proof
-  /api/proofverification/:
+        - Proofs
+      security:
+        - basic
+  /proofs/verifications:
     post:
       summary: Create a proof verification
       description: Create a proof verification
@@ -493,13 +522,15 @@ paths:
       - in: body
         name: data
         schema:
-          $ref: '#/definitions/proofverification_post'
+          $ref: '#/definitions/proofs_verifications_post'
       responses:
         '200':
           description: ''
       tags:
-        - proof
-  /api/schema/:
+        - Proofs
+      security:
+        - basic
+  /schemas:
     get:
       summary: List schemas
       description: List schemas
@@ -507,7 +538,9 @@ paths:
         '200':
           description: ''
       tags:
-        - schema
+        - Schemas
+      security:
+        - basic
     post:
       summary: Create a Schema
       description: Create a Schema
@@ -515,13 +548,15 @@ paths:
       - in: body
         name: data
         schema:
-          $ref: '#/definitions/schema_post'
+          $ref: '#/definitions/schemas_post'
       responses:
         '201':
           description: ''
       tags:
-        - schema
-  /api/schema/{schemaid}/:
+        - Schemas
+      security:
+        - basic
+  /schemas/{schemaid}:
     parameters:
       - description: A unique string value identifying this schema.
         in: path
@@ -540,8 +575,10 @@ paths:
         '200':
           description: ''
       tags:
-        - schema
-  /api/user/:
+        - Schemas
+      security:
+        - basic
+  /users:
     post:
       summary: Register a new user
       description: Register a new user
@@ -549,7 +586,7 @@ paths:
       - in: body
         name: data
         schema:
-          $ref: '#/definitions/user_post'
+          $ref: '#/definitions/users_post'
       responses:
         '201':
           description: User successfully created
@@ -558,8 +595,8 @@ paths:
               description: Path to created user, e.g. /user/userId
               type: string
       tags:
-      - user
-  /api/user/{user}/:
+        - Users
+  /users/{user}:
     parameters:
       - $ref: '#/parameters/userParam'
     get:
@@ -569,7 +606,9 @@ paths:
         '200':
           description: 'Success'
       tags:
-      - user
+        - Users
+      security:
+        - basic
     put:
       summary: Update a User
       description: Update a User (at least one of the properties must be provided)
@@ -577,14 +616,16 @@ paths:
       - in: body
         name: data
         schema:
-          $ref: '#/definitions/user_put'
+          $ref: '#/definitions/users_put'
       responses:
         '200':
           description: 'Success'
         '501':
           description: 'Not yet implemented'
       tags:
-      - user
+        - Users
+      security:
+        - basic
     delete:
       summary: Delete a User
       description: Delete a User
@@ -596,8 +637,10 @@ paths:
         '501':
           description: 'Not yet implemented'
       tags:
-      - user
-  /api/wallet/:
+        - Users
+      security:
+        - basic
+  /wallets:
     get:
       summary: List all wallets of user
       description: List all wallets of user
@@ -605,7 +648,9 @@ paths:
         '200':
           description: ''
       tags:
-      - wallet
+        - Wallets
+      security:
+        - basic
     post:
       summary: Create a new Wallet (optionally with given name and settings)
       description: Create a new Wallet (optionally with given name and settings)
@@ -613,13 +658,15 @@ paths:
       - in: body
         name: data
         schema:
-          $ref: '#/definitions/wallet_post'
+          $ref: '#/definitions/wallets_post'
       responses:
         '201':
           description: ''
       tags:
-      - wallet
-  /api/wallet/{wallet}/:
+        - Wallets
+      security:
+        - basic
+  /wallets/{wallet}:
     parameters:
       - $ref: '#/parameters/walletParam'
     get:
@@ -629,7 +676,9 @@ paths:
         '200':
           description: ''
       tags:
-      - wallet
+        - Wallets
+      security:
+        - basic
     delete:
       summary: Delete a Wallet
       description: Delete a Wallet
@@ -637,8 +686,19 @@ paths:
         '204':
           description: ''
       tags:
-      - wallet
-  /api/endpoint/:
+      - Wallets
+      security:
+        - basic
+  /endpoints:
+    get:
+      summary: Retrieve Agent Endpoint
+      responses:
+        '200':
+          description: 'Success'
+      tags:
+        - Endpoints
+      security:
+        - basic
     post:
       description: Agent endpoint
       summary: Agent endpoint
@@ -678,4 +738,4 @@ paths:
         '200':
           description: ''
       tags:
-        - endpoint
+        - Endpoints

@@ -48,7 +48,7 @@ module.exports = {
     });
     const [recipient] = await indy.getEndpointForDid(req.wallet.handle, pool.handle, connOffer.did);
     const agentResult = await agent
-      .post(`http://${recipient}/api/endpoint`)
+      .post(`http://${recipient}/api/endpoints`)
       .type('application/json')
       .send({
         type: 'anon',

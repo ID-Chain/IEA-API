@@ -11,7 +11,6 @@ const APIResult = require('../api-result');
 const swaggerDoc = YAML.load('./swagger.yaml');
 
 ajv.addSchema(swaggerDoc, 'swagger.json');
-const rx= /^\/api\/(\w+)/;
 
 /**
  * Validation Middleware
@@ -22,16 +21,36 @@ const rx= /^\/api\/(\w+)/;
  * @param {function} next expressjs callback function
  */
 async function middleware(req, res, next) {
-  const url = req.originalUrl;
-  const match = rx.exec(url);
-  const vName = (match && match.length > 1) ? `${match[1]}_${req.method.toLowerCase()}` : null;
-  const validate = (vName) ? ajv.getSchema(`swagger.json#/definitions/${vName}`) : null;
-  const valid = (validate) ? validate(req.body) : true;
+  if (typeof req.swagger !== 'object') next();
+  const vName = getDefinitionName(req.swagger.pathName, req.method);
+  const validate = vName
+    ? ajv.getSchema(`swagger.json#/definitions/${vName}`)
+    : null;
+  const valid = validate ? validate(req.body) : true;
   if (!valid) {
     next(new APIResult(400, {message: ajv.errorsText(validate.errors)}));
   } else {
     next();
   }
+}
+
+/**
+ * Get definition name as described in Swagger file
+ * @param {string} pathName
+ * @param {string} method
+ * @return {string} definition name
+ */
+function getDefinitionName(pathName, method) {
+  const rx = /(?!_)\w.+?(?=({))(?!_)/;
+  const slash = new RegExp('/', 'gi');
+  const tmp = pathName.replace(slash, '_') + '_{';
+  const match = rx.exec(tmp);
+  let definition = null;
+  if (match) {
+    definition = match[0];
+    definition += `${method.toLowerCase()}`;
+  }
+  return definition;
 }
 
 module.exports = wrap(middleware);

@@ -13,6 +13,9 @@ const wrap = require('../asyncwrap').wrap;
 const APIResult = require('../api-result');
 
 module.exports = {
+  retrieve: wrap(async (req, res, next) => {
+
+  }),
   handle: wrap(async (req, res, next) => {
     const type = req.body.type;
     const target = req.body.target;

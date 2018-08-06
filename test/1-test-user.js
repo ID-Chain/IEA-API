@@ -18,58 +18,73 @@ const acceptHeader = vars.acceptHeader;
 const bothHeaders = vars.bothHeaders;
 let valuesToDelete = [];
 
-describe('/api/user', function() {
+describe('/users', function() {
   let tmpUser = {username: 'willDelete', password: 'afterThis'};
 
   it('POST / should create an user with username and password', async function() {
     this.timeout(60000);
-    const res = await agent.post('/api/user').set(bothHeaders).send(tmpUser);
-    const id = res.get('location').substring(6);
+    const res = await agent
+      .post('/users')
+      .set(bothHeaders)
+      .send(tmpUser);
+    const id = res.get('location').substring(7);
     tmpUser.id = id;
-    valuesToDelete.push({id: id, auth: [tmpUser.username, tmpUser.password], path: 'user'});
+    valuesToDelete.push({
+      id: id,
+      auth: [tmpUser.username, tmpUser.password],
+      path: 'users',
+    });
   });
 
   it('POST / should return 400 on missing parameter', async function() {
-    await agent.post('/api/user').set(bothHeaders).send({username: 'something'})
+    await agent
+      .post('/users')
+      .set(bothHeaders)
+      .send({username: 'something'})
       .expect(400);
   });
 
   it('GET /:id should retrieve specific user', async function() {
-    const res = await agent.get(`/api/user/${tmpUser.id}`)
+    const res = await agent
+      .get(`/users/${tmpUser.id}`)
       .auth(tmpUser.username, tmpUser.password)
       .set(acceptHeader)
       .expect(200);
-      expect(res.body).to.eql({
-        id: tmpUser.id,
-        username: tmpUser.username,
-      });
+    expect(res.body).to.eql({
+      id: tmpUser.id,
+      username: tmpUser.username,
+    });
   });
 
   it('GET /me should retrieve current user', async function() {
-    const res = await agent.get('/api/user/me')
+    const res = await agent
+      .get('/users/me')
       .auth(tmpUser.username, tmpUser.password)
       .set(acceptHeader)
       .expect(200);
-      expect(res.body).to.eql({
-        id: tmpUser.id,
-        username: tmpUser.username,
-      });
+    expect(res.body).to.eql({
+      id: tmpUser.id,
+      username: tmpUser.username,
+    });
   });
 
   it('GET /otheruser should return 404', async function() {
-    await agent.get('/api/user/otheruser')
+    await agent
+      .get('/users/otheruser')
       .auth(tmpUser.username, tmpUser.password)
       .set(acceptHeader)
       .expect(404);
   });
 
   it('PUT /:id should update specific user', async function() {
-    await agent.put(`/api/user/${tmpUser.id}`)
+    await agent
+      .put(`/users/${tmpUser.id}`)
       .auth(tmpUser.username, tmpUser.password)
       .set(bothHeaders)
       .send({username: 'newName', password: 'newPass'})
       .expect(200);
-    const res2 = await agent.get(`/api/user/${tmpUser.id}`)
+    const res2 = await agent
+      .get(`/users/${tmpUser.id}`)
       .auth('newName', 'newPass')
       .set(acceptHeader)
       .expect(200);
@@ -79,12 +94,14 @@ describe('/api/user', function() {
   });
 
   it('PUT /me with only username should succeed', async function() {
-    await agent.put(`/api/user/${tmpUser.id}`)
+    await agent
+      .put(`/users/${tmpUser.id}`)
       .auth(tmpUser.username, tmpUser.password)
       .set(bothHeaders)
       .send({username: 'willDelete'})
       .expect(200);
-    const res2 = await agent.get(`/api/user/${tmpUser.id}`)
+    const res2 = await agent
+      .get(`/users/${tmpUser.id}`)
       .auth('willDelete', tmpUser.password)
       .set(acceptHeader)
       .expect(200);
@@ -92,18 +109,22 @@ describe('/api/user', function() {
     tmpUser.username = res2.body.username;
   });
 
-  it('DELETE /user/:id should delete specific user', async function() {
-    await agent.delete(`/api/user/${tmpUser.id}`)
+  it('DELETE /users/:id should delete specific user', async function() {
+    await agent
+      .delete(`/users/${tmpUser.id}`)
       .auth(tmpUser.username, tmpUser.password)
-      .set(acceptHeader).expect(204);
+      .set(acceptHeader)
+      .expect(204);
   });
 
   after(async function() {
     // clean up
     valuesToDelete.reverse();
     for (const v of valuesToDelete) {
-      await agent.delete(`/api/${v.path}/${v.id}`)
-        .auth(...v.auth).set(acceptHeader);
+      await agent
+        .delete(`/${v.path}/${v.id}`)
+        .auth(...v.auth)
+        .set(acceptHeader);
     }
   });
 });

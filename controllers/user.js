@@ -1,4 +1,3 @@
-
 const APIResult = require('../api-result');
 const User = require('../models/user');
 const wrap = require('../asyncwrap').wrap;
@@ -11,21 +10,24 @@ const log = require('../log').log;
  * @return {boolean}
  */
 function isSame(user, resource) {
-  return (resource === 'me' || resource === user.id);
+  return resource === 'me' || resource === user.id;
 }
 
 const notFoundResult = new APIResult(404, {message: 'user not found'});
 
 module.exports = {
-
   create: wrap(async (req, res, next) => {
-    const userExists = await User.count({username: req.body.username}).exec() > 0;
+    const userExists =
+      (await User.count({username: req.body.username}).exec()) > 0;
     if (userExists) {
       return next(new APIResult(400, {message: 'username already taken'}));
     }
-    let u = new User({username: req.body.username, password: req.body.password});
+    let u = new User({
+      username: req.body.username,
+      password: req.body.password,
+    });
     u = await u.save();
-    res.set('location', '/user/'+u._id);
+    res.set('location', '/users/' + u._id);
     next(new APIResult(201));
   }),
 
@@ -41,7 +43,12 @@ module.exports = {
       return next(notFoundResult);
     }
     if (!req.body.username && !req.body.password) {
-      return next(new APIResult(400, {message: 'no values to update provided, either username or password must be present'}));
+      return next(
+        new APIResult(400, {
+          message:
+            'no values to update provided, either username or password must be present',
+        })
+      );
     }
     if (req.body.username) req.user.username = req.body.username;
     if (req.body.password) req.user.password = req.body.password;
@@ -61,5 +68,4 @@ module.exports = {
     await req.user.remove();
     next(new APIResult(204));
   }),
-
 };
