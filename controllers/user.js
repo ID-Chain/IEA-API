@@ -1,7 +1,9 @@
 const APIResult = require('../api-result');
 const User = require('../models/user');
+const Wallet = require('../models/wallet');
 const wrap = require('../asyncwrap').wrap;
 const log = require('../log').log;
+const authenticate = require('../middleware/auth').authenticate;
 
 /**
  * Check if user is the same as requesting user
@@ -16,6 +18,17 @@ function isSame(user, resource) {
 const notFoundResult = new APIResult(404, { message: 'user not found' });
 
 module.exports = {
+    login: wrap(async (req, res, next) => {
+        authenticate(req.body.username, req.body.password, async (err, user) => {
+            if (err) next(new APIResult(401, err));
+            if (!user) next(new APIResult(401, { message: 'Invalid Username or Password' }));
+            let wallet = await Wallet.find({ owner: user.id }).exec();
+            // I think we should work only with one wallet
+            if (wallet && wallet.length > 0) wallet = wallet[0];
+            next(new APIResult(200, { username: user.username, wallet: wallet['_id'] }));
+        });
+    }),
+
     create: wrap(async (req, res, next) => {
         const userExists = (await User.count({ username: req.body.username }).exec()) > 0;
         if (userExists) {

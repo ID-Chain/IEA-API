@@ -22,9 +22,14 @@ router
     // TODO rate-limiting?
     .post(user.create);
 
+router
+    .route('/login')
+    // TODO rate-limiting?
+    .post(user.login);
+
 router.route('/endpoint').post(endpoint.handle);
 
-router.use(auth);
+router.use(auth.check);
 router.use(walletProvider.before);
 router.param('wallet', walletProvider.param);
 

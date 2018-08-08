@@ -430,6 +430,42 @@ describe('behaviour', function() {
         });
     });
 
+    describe('login', function() {
+        it('given a valid username & password login should be successful', async function() {
+            this.timeout(60000);
+            const res = await agent
+                .post('/api/login')
+                .set(bothHeaders)
+                .send({ username: rp.username, password: rp.password })
+                .expect(200);
+            expect(typeof res.body).to.equal('object');
+            expect(res.body.username).to.equal(rp.username);
+            expect(typeof res.body.wallet).to.equal('string');
+        });
+
+        it('given an unknown username login should return Unauthorized 401', async function() {
+            this.timeout(60000);
+            const res = await agent
+                .post('/api/login')
+                .set(bothHeaders)
+                .send({ username: 'invalidUsername', password: rp.password })
+                .expect(401);
+            expect(typeof res.body).to.equal('object');
+            expect(res.body.message).to.equal('Invalid Username or Password');
+        });
+
+        it('given an unknown username login should return Unauthorized 401', async function() {
+            this.timeout(60000);
+            const res = await agent
+                .post('/api/login')
+                .set(bothHeaders)
+                .send({ username: rp.username, password: 'invalidPassword' })
+                .expect(401);
+            expect(typeof res.body).to.equal('object');
+            expect(res.body.message).to.equal('Invalid Username or Password');
+        });
+    });
+
     after(async function() {
         // clean up
         this.timeout(60000);
