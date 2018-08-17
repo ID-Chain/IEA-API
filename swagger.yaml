@@ -800,3 +800,87 @@ paths:
           description: 'Returns list of transactions'
       tags:
         - transactions
+
+  /api/relationships:
+    get:
+      security:
+        - Bearer: []
+      description: 'Get all relationships/pairwises for a wallet'
+      parameters:
+        - in: header
+          name: wallet
+          description: A unique string value identifying a wallet.
+          required: true
+          type: string
+      required:
+        - wallet
+      responses:
+        '200':
+          description: 'Returns list of all relationships'
+      tags:
+        - relationships
+
+  /api/relationships/{theirDid}:
+    get:
+      security:
+        - Bearer: []
+      description: 'Get all relationships/pairwise for a given their DID and a wallet'
+      parameters:
+        - in: header
+          name: wallet
+          description: A unique string value identifying a wallet.
+          required: true
+          type: string
+        - in: path
+          name: theirDid
+          description: Their DID, part of the pairwise information store in the connection creation process.
+          required: true
+          type: string
+      required:
+        - wallet
+      responses:
+        '200':
+          description: 'All known relationship Information'
+      tags:
+        - relationships
+
+  /api/relationships/:theirdid/attributes:
+    post:
+      security:
+        - Bearer: []
+      description: 'Add attributes to a relationship'
+      parameters:
+        - in: header
+          name: wallet
+          description: A unique string value identifying a wallet.
+          required: true
+          type: string
+        - in: path
+          name: theirDid
+          description: Their DID, part of the pairwise information store in the connection creation process.
+          required: true
+          type: string
+        - in: body
+          name: data
+          schema:
+            properties:
+              key:
+                description: 'Attribute name/key'
+                type: string
+                example: 'logo'
+              value:
+                description: 'Value of the attribute'
+                type: string
+                example: 'logoUrl'
+            required:
+              - name
+              - value
+      required:
+        - wallet
+        - theirDid
+        - data
+      responses:
+        '200':
+          description: 'Successfully added'
+      tags:
+        - relationships

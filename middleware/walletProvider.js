@@ -23,7 +23,13 @@ async function provideWallet(req, walletId) {
         owner: req.user
     }).exec();
     if (!w) throw new NotFound('Wallet not found');
-    await w.open();
+    try {
+        await w.open();
+    } catch (err) {
+        log.info(err);
+        await w.close();
+        await w.open();
+    }
     req.wallet = w;
     return w;
 }

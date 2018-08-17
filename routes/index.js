@@ -16,6 +16,7 @@ const credoffer = require('../controllers/credentialoffer');
 const proof = require('../controllers/proof');
 const endpoint = require('../controllers/endpoint');
 const transactions = require('../controllers/transactions');
+const pairwise = require('../controllers/pairwise');
 
 router
     .route('/user')
@@ -54,6 +55,12 @@ router
     .route('/schema')
     .get(schema.list)
     .post(schema.create);
+
+router.route('/relationships').get(pairwise.getAll);
+
+router.route('/relationships/:theirdid/').get(pairwise.get);
+
+router.route('/relationships/:theirdid/attributes').post(pairwise.pushAttribute);
 
 router.route('/schema/:schema/').get(schema.retrieve);
 
