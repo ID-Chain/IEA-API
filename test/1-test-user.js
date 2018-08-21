@@ -118,14 +118,62 @@ describe('/api/user', function() {
         tmpUser.username = res2.body.username;
     });
 
+    const wUser = {
+        username: 'defaultwallet',
+        password: 'defaultwallet',
+        wallet: {
+            name: 'defaultwalletname',
+            credentials: { key: 'walletkey' }
+        }
+    };
+    it('POST / should create user with default wallet', async function() {
+        delete bothHeaders.Authorization;
+        const res = await agent
+            .post('/api/user')
+            .set(bothHeaders)
+            .send({
+                username: wUser.username,
+                password: wUser.password,
+                wallet: wUser.wallet
+            })
+            // .send(wUser)
+            .expect(201);
+        const id = res.get('location').substring(6);
+        wUser.id = id;
+        valuesToDelete.push({ id: id, auth: [wUser.username, wUser.password], path: 'user' });
+    });
+
+    it('GET /:walletedUserId should retrieve user with default wallet', async function() {
+        delete bothHeaders.Authorization;
+
+        const login = await agent
+            .post('/api/login')
+            .set(bothHeaders)
+            .send(wUser)
+            .expect(200);
+        bothHeaders.Authorization = login.body.token;
+
+        const data = await agent
+            .get('/api/user/' + wUser.id)
+            .set(bothHeaders)
+            .expect(200);
+        expect(data.body).to.eql({
+            id: wUser.id,
+            username: wUser.username,
+            wallet: wUser.wallet.name
+        });
+    });
+
     it('DELETE /user/:id should delete specific user', async function() {
         await agent
             .delete(`/api/user/${tmpUser.id}`)
             .set(bothHeaders)
             .expect(204);
+        valuesToDelete = valuesToDelete.filter(v => v.id !== tmpUser.id);
     });
 
     after(async function() {
+        this.timeout(120000);
         // clean up
         valuesToDelete.reverse();
         for (const v of valuesToDelete) {
