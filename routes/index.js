@@ -47,9 +47,29 @@ router
     .get(wallet.retrieve)
     .delete(wallet.delete);
 
-router.route('/connectionoffer').post(connection.create);
+router
+    .route('/connectionoffer')
+    .get(connection.listOffers)
+    .post(connection.createOffer);
+router
+    .route('/connectionoffer/:connectionOfferId')
+    .get(connection.retrieveOffer)
+    .delete(connection.deleteOffer);
 
-router.route('/connection').post(connection.accept);
+router
+    .route('/connectionrequest')
+    .get(connection.listRequests)
+    .post(connection.createRequest);
+router
+    .route('/connectionrequest/:connectionRequestId')
+    .get(connection.retrieveRequest)
+    .delete(connection.deleteRequest);
+
+router
+    .route('/connectionresponse')
+    .get(connection.listResponses)
+    .post(connection.createResponse);
+router.route('/connectionresponse/:connectionResponseId').get(connection.retrieveResponse);
 
 router
     .route('/schema')

@@ -18,15 +18,15 @@ const credential = require('./credential');
 const proof = require('./proof');
 
 const handlers = {};
-handlers[lib.message.messageTypes.CONNECTIONOFFER] = connection.offer;
-handlers[lib.message.messageTypes.CONNECTIONREQUEST] = connection.request;
-handlers[lib.message.messageTypes.CONNECTIONRESPONSE] = connection.response;
-handlers[lib.message.messageTypes.CONNECTIONACKNOWLEDGE] = connection.acknowledgement;
-handlers[lib.message.messageTypes.CREDENTIALOFFER] = credential.offer;
-handlers[lib.message.messageTypes.CREDENTIALREQUEST] = credential.request;
-handlers[lib.message.messageTypes.CREDENTIAL] = credential.credential;
-handlers[lib.message.messageTypes.PROOFREQUEST] = proof.request;
-handlers[lib.message.messageTypes.PROOF] = proof.proof;
+handlers[lib.message.messageTypes.CONNECTIONOFFER] = connection.receiveOffer;
+handlers[lib.message.messageTypes.CONNECTIONREQUEST] = connection.receiveRequest;
+handlers[lib.message.messageTypes.CONNECTIONRESPONSE] = connection.receiveResponse;
+handlers[lib.message.messageTypes.CONNECTIONACKNOWLEDGE] = connection.receiveAcknowledgement;
+handlers[lib.message.messageTypes.CREDENTIALOFFER] = credential.receiveOffer;
+handlers[lib.message.messageTypes.CREDENTIALREQUEST] = credential.receiveRequest;
+handlers[lib.message.messageTypes.CREDENTIAL] = credential.receiveCredential;
+handlers[lib.message.messageTypes.PROOFREQUEST] = proof.receiveRequest;
+handlers[lib.message.messageTypes.PROOF] = proof.receiveProof;
 
 /**
  * Loops through wallets trying to find an applicable one

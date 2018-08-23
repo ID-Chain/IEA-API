@@ -4,121 +4,260 @@
  */
 
 const indy = require('indy-sdk');
-const agent = require('superagent');
 
 const wrap = require('../asyncwrap').wrap;
 const lib = require('../lib');
 const log = require('../log').log;
 const pool = require('../pool');
 const APIResult = require('../api-result');
-const ConnectionOffer = require('../models/connectionoffer');
 const Message = require('../models/message');
 
-const ENDPOINT = `${process.env.APP_HOST}:${process.env.APP_PORT}`;
+const ENDPOINT = process.env.APP_ENDPOINT;
 
 module.exports = {
-    create: wrap(async (req, res, next) => {
-        const [fromToDid, fromToKey] = await req.wallet.createDid();
-        await pool.nymRequest(req.wallet.handle, req.wallet.ownDid, fromToDid, fromToKey);
-        await pool.attribRequest(
-            req.wallet.handle,
-            fromToDid,
-            fromToDid,
-            null,
-            { endpoint: { ha: req.body.endpoint || ENDPOINT, verkey: fromToKey } },
-            null
-        );
-        let connectionOffer = new ConnectionOffer({
-            issuerWallet: req.wallet,
-            ownDid: fromToDid,
-            role: req.body.role || 'NONE'
-        });
-        connectionOffer = await connectionOffer.save();
-        next(
-            new APIResult(201, {
-                did: connectionOffer.ownDid,
-                nonce: connectionOffer.nonce,
-                role: connectionOffer.role
-            })
-        );
+    listOffers: wrap(async (req, res, next) => {
+        const data = await Message.find({
+            wallet: req.wallet.id,
+            type: lib.message.messageTypes.CONNECTIONOFFER
+        }).exec();
+        next(APIResult.success(data));
     }),
 
-    accept: wrap(async (req, res, next) => {
-        const connOffer = req.body.connectionOffer;
-        const [toFromDid, toFromKey] = await req.wallet.createDid();
-        await indy.setEndpointForDid(req.wallet.handle, toFromDid, req.body.endpoint || ENDPOINT, toFromKey);
-        const fromToKey = await indy.keyForDid(pool.handle, req.wallet.handle, connOffer.did);
-        const [signature, anonCryptConnRes] = await req.wallet.signAndAnonCrypt(toFromKey, fromToKey, {
-            did: toFromDid,
-            verkey: toFromKey,
-            endpoint: req.body.endpoint || ENDPOINT,
-            nonce: connOffer.nonce
-        });
-        const [recipient] = await indy.getEndpointForDid(req.wallet.handle, pool.handle, connOffer.did);
-        const agentResult = await agent
-            .post(`http://${recipient}/api/endpoint`)
-            .type('application/json')
-            .send({
-                type: 'anon',
-                target: 'accept_connection',
-                ref: connOffer.nonce,
-                signature: signature,
-                message: anonCryptConnRes
+    createOffer: wrap(async (req, res, next) => {
+        const wallet = req.wallet;
+        const endpoint = req.body.endpoint || ENDPOINT;
+        // TODO role const role = req.body.role || 'NONE';
+        const connOffer = await lib.connection.createConnectionOffer(wallet, endpoint);
+        await Message.store(req.wallet.id, connOffer.id, connOffer.type, wallet.ownDid, null, connOffer);
+        // TODO return the whole message object or only the connectionOffer part?
+        next(APIResult.created(connOffer));
+    }),
+
+    retrieveOffer: wrap(async (req, res, next) => {
+        const offerId = req.params.connectionOfferId;
+        const data = await Message.find({
+            _id: offerId,
+            type: lib.message.messageTypes.CONNECTIONOFFER,
+            wallet: req.wallet.id
+        }).exec();
+        if (!data) {
+            next(APIResult.notFound());
+        } else {
+            next(APIResult.success(data));
+        }
+    }),
+
+    deleteOffer: wrap(async (req, res, next) => {
+        const offerId = req.params.connectionOfferId;
+        const data = await Message.find({
+            _id: offerId,
+            type: lib.message.messageTypes.CONNECTIONOFFER,
+            wallet: req.wallet.id
+        }).exec();
+        if (!data) {
+            next(APIResult.notFound());
+        } else {
+            await data.remove();
+            next(APIResult.noContent());
+        }
+    }),
+
+    listRequests: wrap(async (req, res, next) => {
+        const data = await Message.find({
+            type: lib.message.messageTypes.CONNECTIONREQUEST,
+            wallet: req.wallet.id
+        }).exec();
+        next(APIResult.success(data));
+    }),
+
+    // also sends the request
+    createRequest: wrap(async (req, res, next) => {
+        const wallet = req.wallet;
+        let connOffer = req.body.connectionOffer;
+        const myEndpoint = req.body.Endpoint || ENDPOINT;
+        let theirEndpointDid = req.body.theirDid;
+        let theirEndpointVk = req.body.theirVk;
+        let theirEndpoint = req.body.theirEndpoint;
+        let nonce = null;
+        let meta = {};
+
+        // if connOffer is referenced by messageId, retrieve it
+        if (connOffer && typeof connOffer === 'string') {
+            connOffer = await Message.findOne({
+                messageId: connOffer,
+                wallet: wallet.id,
+                recipientDid: wallet.ownDid,
+                type: lib.message.messageTypes.CONNECTIONOFFER
+            }).exec();
+        }
+        if (connOffer) {
+            theirEndpointDid = connOffer.message.did;
+            theirEndpointVk = connOffer.message.verkey || theirEndpointVk;
+            theirEndpoint = connOffer.message.endpoint || theirEndpoint;
+            nonce = connOffer.message.nonce;
+        }
+        // without the endpointDid, we cannot communicate
+        if (!theirEndpointDid) {
+            return next(APIResult.badRequest('either connectionOffer or recipientDid are required'));
+        }
+        // if the verkey is neither in the offer nor in the body
+        if (!theirEndpointVk) {
+            // it must be on the ledger!
+            theirEndpointVk = await indy.keyForDid(pool.handle, wallet.handle, theirEndpointDid);
+        }
+        // if their endpoint is neither in the offer not in the body
+        if (!theirEndpoint) {
+            // it must be on the ledger!
+            [theirEndpoint] = await indy.getEndpointForDid(wallet.handle, pool.handle, theirEndpointDid);
+        }
+
+        // set their information in the wallet
+        // this somehow prevents following operations on the wallet
+        // if it fails, i.e. we're trying to store a did twice, which
+        // may happen since endpoint Dids do not change that often
+        // see related jira: https://jira.hyperledger.org/browse/IS-802
+        try {
+            await indy.storeTheirDid(wallet.handle, {
+                did: theirEndpointDid,
+                verkey: theirEndpointVk
             });
-        if (agentResult.status !== 200) {
-            return next(new APIResult(agentResult.status, { message: agentResult.body }));
+            await indy.setEndpointForDid(wallet.handle, theirEndpointDid, theirEndpoint, theirEndpointVk);
+        } catch (err) {
+            if (err.message !== '213') {
+                throw err;
+            }
         }
-        if (connOffer.role !== 'NONE') {
-            req.wallet.ownDid = toFromDid;
-            await req.wallet.save();
-        }
-        // ToDo The following line creates indy error with new version of indy-sdk
-        //  await indy.storeTheirDid(req.wallet.handle, {did: connOffer.did, verkey: fromToKey});
-        await indy.setEndpointForDid(req.wallet.handle, connOffer.did, recipient, fromToKey);
-        /* await pool.attribRequest(
-            req.wallet.handle,
-            toFromDid,
-            toFromDid,
-            null,
-            { endpoint: { ha: req.body.endpoint || ENDPOINT } },
-            null
-        ); */
-        await indy.createPairwise(req.wallet.handle, connOffer.did, toFromDid);
-        next(
-            new APIResult(200, {
-                myDid: toFromDid,
-                theirDid: connOffer.did
-            })
+
+        // and also in the database
+        meta = {
+            theirEndpointDid: theirEndpointDid,
+            theirEndpointVk: theirEndpointVk,
+            theirEndpoint: theirEndpoint
+        };
+
+        log.debug('meta', meta);
+        const connRequest = await lib.connection.createConnectionRequest(req.wallet, myEndpoint, nonce);
+        log.debug('connRequest', connRequest);
+        const msg = await Message.store(
+            wallet.id,
+            connRequest.message.nonce,
+            connRequest.type,
+            wallet.ownDid,
+            theirEndpointDid,
+            connRequest,
+            meta
         );
+        await lib.message.sendAnoncryptMessage(pool.handle, wallet.handle, theirEndpointDid, connRequest);
+        log.debug('message sent');
+        next(APIResult.success(msg));
     }),
 
-    async offer(wallet, message) {
-        await Message.store(wallet.id, message.id, message.type, message.message);
+    retrieveRequest: wrap(async (req, res, next) => {
+        const requestId = req.params.connectionRequestId;
+        const data = await Message.findConnectionRequestById(requestId, req.wallet).exec();
+        if (!data) {
+            next(APIResult.notFound());
+        } else {
+            next(APIResult.success(data));
+        }
+    }),
+
+    deleteRequest: wrap(async (req, res, next) => {
+        const requestId = req.params.connectionRequestId;
+        const data = await Message.findConnectionRequestById(requestId, req.wallet).exec();
+        if (!data) {
+            next(APIResult.notFound());
+        } else {
+            await data.remove();
+            next(APIResult.noContent());
+        }
+    }),
+
+    listResponses: wrap(async (req, res, next) => {
+        const data = await Message.find({
+            type: lib.message.messageTypes.CONNECTIONRESPONSE,
+            wallet: req.wallet.id
+        }).exec();
+        next(APIResult.success(data));
+    }),
+
+    // aka accept request manually
+    createResponse: wrap(async (req, res, next) => {
+        const wallet = req.wallet;
+        let connRequest = req.body.connectionRequest;
+
+        // if connRequest is referenced by messageId, retrieve it
+        if (connRequest && typeof connRequest === 'string') {
+            connRequest = await Message.findOne({
+                messageId: connRequest,
+                wallet: wallet.id,
+                recipientDid: wallet.ownDid,
+                type: lib.message.messageTypes.CONNECTIONREQUEST
+            }).exec();
+        }
+        if (!connRequest) {
+            return next(APIResult.badRequest('no corresponding connection request found'));
+        }
+        const connRes = await module.exports.acceptRequest(wallet, connRequest.message);
+        next(APIResult.created(connRes));
+    }),
+
+    retrieveResponse: wrap(async (req, res, next) => {
+        const responseId = req.params.connectionResponseId;
+        const data = await Message.findConnectionResponseById(responseId, req.wallet).exec();
+        if (!data) {
+            next(APIResult.notFound());
+        } else {
+            next(APIResult.success(data));
+        }
+    }),
+
+    async receiveOffer(wallet, message) {
+        await Message.store(wallet.id, message.id, message.type, message.message.did, wallet.ownDid, message.message);
         return APIResult.accepted();
     },
 
-    async request(wallet, message) {
+    async receiveRequest(wallet, message) {
         const connOffer = await Message.findOne({
             messageId: message.id,
-            wallet: wallet.id
+            type: lib.message.messageTypes.CONNECTIONOFFER,
+            wallet: wallet.id,
+            senderDid: message.message.did,
+            recipientDid: wallet.ownDid
         }).exec();
 
         // previous offer exists
         if (connOffer) {
-            return await module.exports.acceptRequest(wallet, message.message);
+            await module.exports.acceptRequest(wallet, message.message, connOffer);
+            return APIResult.accepted();
         }
 
         // no previous offer, so just store the request
-        await Message.store(wallet.id, message.message.nonce, message.type, message.message);
+        await Message.store(
+            wallet.id,
+            message.message.nonce,
+            message.type,
+            message.message.did,
+            wallet.ownDid,
+            message.message
+        );
         return APIResult.accepted();
     },
 
-    async response(wallet, message) {
-        // TODO
-        return new APIResult(501, { message: 'not implemented' });
+    async receiveResponse(wallet, message) {
+        const connReq = await Message.findOne({
+            messageId: message.id,
+            type: lib.message.messageTypes.CONNECTIONOFFER,
+            wallet: wallet.id,
+            senderDid: wallet.ownDid
+        }).exec();
+        if (!connReq) {
+            return APIResult.badRequest('no corresponding connection request found');
+        }
+        return await module.exports.acceptResponse(wallet, connReq, message);
     },
 
-    async acknowledgement(wallet, message) {
+    async receiveAcknowledgement(wallet, message) {
         // TODO
         return new APIResult(501, { message: 'not implemented' });
     },
@@ -148,7 +287,8 @@ module.exports = {
             return new APIResult(400, { message: 'endpoint details missing from request and not found on ledger' });
         }
 
-        const [myDid, myVk] = await indy.createAndStoreMyDid(wallet.handle, {});
+        const connRes = await lib.connection.createConnectionResponse(wallet, theirDid, requestNonce);
+        const myDid = connRes.message.did;
         await indy.storeTheirDid(wallet.handle, {
             did: theirDid,
             verkey: theirVk
@@ -158,23 +298,71 @@ module.exports = {
             theirDid,
             myDid,
             JSON.stringify({
-                theirEndpointDid: theirEndpointDid,
-                verified: false
+                theirEndpointDid: theirEndpointDid
             })
         );
         await indy.setEndpointForDid(wallet.handle, theirEndpointDid, theirEndpoint, theirEndpointVk);
+        await Message.store(wallet.id, connRes.id, connRes.type, wallet.ownDid, theirDid, connRes);
 
-        const connRes = lib.connection.createConnectionResponse(
-            wallet,
-            myDid,
-            myVk,
-            theirDid,
-            theirVk,
-            connReq.request_nonce
+        // anoncrypt inner message with theirDid
+        const anoncryptMessage = await lib.crypto.anonCrypt(theirVk, connRes.message);
+        // anon crypt the whole connRes again and send it
+        await lib.message.sendAnoncryptMessage(
+            pool.handle,
+            wallet.handle,
+            theirEndpointDid,
+            // copy connRes and replace message with anoncrypted version
+            Object.assign({}, connRes, { message: anoncryptMessage })
         );
-        // TODO store unencrypted message somewhere?
 
-        connRes.message = await lib.crypto.anonCrypt(theirVk, connRes.message);
-        return lib.message.sendAnoncryptMessage(pool.handle, wallet.handle, theirEndpointDid, connRes);
+        // return unencrypted connRes to caller
+        return connRes;
+    },
+
+    async acceptResponse(wallet, connReq, connRes) {
+        // decrypt message and retrieve their information
+        const myDid = connRes.aud;
+        const decryptedConnRes = await lib.crypto.anonDecrypt(wallet.handle, myDid, connRes.message);
+        const theirDid = decryptedConnRes.did;
+        const nonce = decryptedConnRes.nonce;
+        let theirVk = decryptedConnRes.theirVk;
+        let pairwise;
+        let pairwiseMeta;
+        if (connReq.message.nonce !== nonce) {
+            throw APIResult.badRequest('nonce mismatch');
+        }
+        // if there is no verkey in the response
+        if (!theirVk) {
+            // it must be on the ledger!
+            theirVk = await indy.keyForDid(pool.handle, wallet.handle, theirDid);
+        }
+
+        // create pairwise and store their information
+        pairwiseMeta = connReq.meta;
+        pairwise = await indy.createPairwise(
+            wallet.handle,
+            theirDid,
+            connReq.message.did,
+            JSON.stringify(pairwiseMeta)
+        );
+        await indy.storeTheirDid(wallet.handle, {
+            did: theirDid,
+            verkey: theirVk
+        });
+
+        // create connection ack
+        const connAck = await lib.connection.createConnectionAcknowledgement(myDid);
+        const myVk = await indy.keyForLocalDid(wallet.handle, myDid);
+        // authcrypt inner message with myDid and theirDid
+        const authCryptedMessage = await lib.crypto.authCrypt(wallet.handle, myVk, theirVk, connAck.message);
+        // anon crypt the whole connAck again (with theirEndpointDid) and send it
+        await lib.message.sendAnoncryptMessage(
+            pool.handle,
+            wallet.handle,
+            pairwiseMeta.theirEndpointDid,
+            // copy connAck and replace message with authcrypted version
+            Object.assign({}, connAck, { message: authCryptedMessage })
+        );
+        return connAck;
     }
 };
