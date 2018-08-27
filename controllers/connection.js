@@ -135,9 +135,7 @@ module.exports = {
             theirEndpoint: theirEndpoint
         };
 
-        log.debug('meta', meta);
         const connRequest = await lib.connection.createConnectionRequest(req.wallet, myEndpoint, nonce);
-        log.debug('connRequest', connRequest);
         const msg = await Message.store(
             wallet.id,
             connRequest.message.nonce,
@@ -148,7 +146,6 @@ module.exports = {
             meta
         );
         await lib.message.sendAnoncryptMessage(pool.handle, wallet.handle, theirEndpointDid, connRequest);
-        log.debug('message sent');
         next(APIResult.success(msg));
     }),
 
@@ -218,12 +215,12 @@ module.exports = {
     },
 
     async receiveRequest(wallet, message) {
+        log.debug('received request');
         const connOffer = await Message.findOne({
             messageId: message.id,
             type: lib.message.messageTypes.CONNECTIONOFFER,
             wallet: wallet.id,
-            senderDid: message.message.did,
-            recipientDid: wallet.ownDid
+            senderDid: wallet.ownDid
         }).exec();
 
         // previous offer exists
@@ -245,6 +242,7 @@ module.exports = {
     },
 
     async receiveResponse(wallet, message) {
+        log.debug('received response');
         const connReq = await Message.findOne({
             messageId: message.id,
             type: lib.message.messageTypes.CONNECTIONOFFER,
@@ -258,16 +256,32 @@ module.exports = {
     },
 
     async receiveAcknowledgement(wallet, message) {
-        // TODO
-        return new APIResult(501, { message: 'not implemented' });
+        log.debug('received acknowledgement');
+        if (!(await indy.isPairwiseExists(wallet.handle, message.id))) {
+            return APIResult.badRequest('unknown sender did, no pairwise exists');
+        }
+        const theirDid = message.id;
+        const pairwise = await indy.getPairwise(wallet.handle, theirDid);
+        const pairwiseMeta = JSON.parse(pairwise.metadata);
+        const myDid = pairwise['my_did'];
+        const myVk = await indy.keyForLocalDid(wallet.handle, myDid);
+        const decryptedMessage = lib.crypto.authDecrypt(wallet.handle, myVk, message.message);
+        if (decryptedMessage !== 'success') {
+            return APIResult.badRequest('unknown message string received');
+        } else {
+            return APIResult.accepted();
+        }
     },
 
     async acceptRequest(wallet, connReq, connOffer) {
         const theirDid = connReq.did;
         let theirVk = connReq.verkey;
         const theirEndpointDid = connReq.endpointDid;
-        let theirEndpoint = connReq.theirEndpoint;
-        let theirEndpointVk;
+        let theirEndpoint = connReq.endpoint;
+        let theirEndpointVk = connReq.endpointVk;
+        const requestNonce = connReq.nonce;
+        // TODO we might have to check if there are any values on the ledger
+        // and if there are whether they equal the values we were sent
         try {
             if (!theirEndpoint) {
                 [theirEndpoint, theirEndpointVk] = await indy.getEndpointForDid(
@@ -283,12 +297,18 @@ module.exports = {
                 theirVk = await indy.keyForDid(pool.handle, wallet.handle, theirDid);
             }
         } catch (err) {
-            log.warn('failed to retrieve endpoint details', err);
-            return new APIResult(400, { message: 'endpoint details missing from request and not found on ledger' });
+            log.debug(
+                'failed to retrieve endpoint details for \n connReq %j\n connOffer %j\n err %j\n',
+                connReq,
+                connOffer,
+                err
+            );
+            throw APIResult.badRequest('endpoint details missing from request and not found on ledger');
         }
 
         const connRes = await lib.connection.createConnectionResponse(wallet, theirDid, requestNonce);
         const myDid = connRes.message.did;
+        const myVk = await indy.keyForLocalDid(wallet.handle, myDid);
         await indy.storeTheirDid(wallet.handle, {
             did: theirDid,
             verkey: theirVk
@@ -298,11 +318,17 @@ module.exports = {
             theirDid,
             myDid,
             JSON.stringify({
-                theirEndpointDid: theirEndpointDid
+                theirEndpointDid: theirEndpointDid,
+                theirEndpointVk: theirEndpointVk,
+                theirEndpoint: theirEndpoint
             })
         );
         await indy.setEndpointForDid(wallet.handle, theirEndpointDid, theirEndpoint, theirEndpointVk);
         await Message.store(wallet.id, connRes.id, connRes.type, wallet.ownDid, theirDid, connRes);
+
+        // write dids to the ledger
+        await pool.nymRequest(wallet.handle, wallet.ownDid, myDid, myVk);
+        await pool.nymRequest(wallet.handle, wallet.ownDid, theirDid, theirVk);
 
         // anoncrypt inner message with theirDid
         const anoncryptMessage = await lib.crypto.anonCrypt(theirVk, connRes.message);
@@ -338,6 +364,10 @@ module.exports = {
         }
 
         // create pairwise and store their information
+        await indy.storeTheirDid(wallet.handle, {
+            did: theirDid,
+            verkey: theirVk
+        });
         pairwiseMeta = connReq.meta;
         pairwise = await indy.createPairwise(
             wallet.handle,
@@ -345,14 +375,15 @@ module.exports = {
             connReq.message.did,
             JSON.stringify(pairwiseMeta)
         );
-        await indy.storeTheirDid(wallet.handle, {
-            did: theirDid,
-            verkey: theirVk
-        });
 
         // create connection ack
         const connAck = await lib.connection.createConnectionAcknowledgement(myDid);
         const myVk = await indy.keyForLocalDid(wallet.handle, myDid);
+
+        // write dids to the ledger
+        await pool.nymRequest(wallet.handle, wallet.ownDid, myDid, myVk);
+        await pool.nymRequest(wallet.handle, wallet.ownDid, theirDid, theirVk);
+
         // authcrypt inner message with myDid and theirDid
         const authCryptedMessage = await lib.crypto.authCrypt(wallet.handle, myVk, theirVk, connAck.message);
         // anon crypt the whole connAck again (with theirEndpointDid) and send it

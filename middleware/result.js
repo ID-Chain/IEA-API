@@ -164,7 +164,7 @@ const indyCodes = {
 
 module.exports = {
     resultMiddleware: (result, req, res, next) => {
-        log.info('result: ', result);
+        log.debug('result: %j', result);
         if (result instanceof Error || result.error) {
             return next(result.error || result);
         }
@@ -173,7 +173,7 @@ module.exports = {
         res.end();
     },
     errorMiddleware: (err, req, res, next) => {
-        log.error('error: ', err);
+        log.error('error: %j', err);
         if (err.indyCode && indyCodes[err.indyCode]) {
             err.status = indyCodes[err.indyCode];
         }
