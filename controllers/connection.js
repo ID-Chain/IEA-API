@@ -245,7 +245,7 @@ module.exports = {
         log.debug('received response');
         const connReq = await Message.findOne({
             messageId: message.id,
-            type: lib.message.messageTypes.CONNECTIONOFFER,
+            type: lib.message.messageTypes.CONNECTIONREQUEST,
             wallet: wallet.id,
             senderDid: wallet.ownDid
         }).exec();
@@ -260,12 +260,21 @@ module.exports = {
         if (!(await indy.isPairwiseExists(wallet.handle, message.id))) {
             return APIResult.badRequest('unknown sender did, no pairwise exists');
         }
+        log.debug('pairwise with sender did exists');
         const theirDid = message.id;
         const pairwise = await indy.getPairwise(wallet.handle, theirDid);
         const pairwiseMeta = JSON.parse(pairwise.metadata);
         const myDid = pairwise['my_did'];
         const myVk = await indy.keyForLocalDid(wallet.handle, myDid);
-        const decryptedMessage = lib.crypto.authDecrypt(wallet.handle, myVk, message.message);
+        const [, decryptedBuffer] = await indy.cryptoAuthDecrypt(
+            wallet.handle,
+            myVk,
+            Buffer.from(message.message, 'base64')
+        );
+        const decryptedMessage = decryptedBuffer.toString('utf-8');
+        // const decryptedMessage = lib.crypto.authDecrypt(wallet.handle, myVk, message.message);
+        log.debug('params', theirDid, pairwise, pairwiseMeta, myDid, myVk);
+        log.debug('successfully decrypted message', decryptedMessage);
         if (decryptedMessage !== 'success') {
             return APIResult.badRequest('unknown message string received');
         } else {
@@ -274,27 +283,35 @@ module.exports = {
     },
 
     async acceptRequest(wallet, connReq, connOffer) {
+        log.debug('accepting request for \n wallet %j\n connReq %j\n connOffer %j\n', wallet, connReq, connOffer);
         const theirDid = connReq.did;
         let theirVk = connReq.verkey;
         const theirEndpointDid = connReq.endpointDid;
         let theirEndpoint = connReq.endpoint;
         let theirEndpointVk = connReq.endpointVk;
         const requestNonce = connReq.nonce;
+        log.debug('initial params', theirDid, theirVk, theirEndpointDid, theirEndpoint, theirEndpointVk, requestNonce);
         // TODO we might have to check if there are any values on the ledger
         // and if there are whether they equal the values we were sent
         try {
             if (!theirEndpoint) {
+                log.debug('theirEndpoint misssing, fetching from ledger');
                 [theirEndpoint, theirEndpointVk] = await indy.getEndpointForDid(
                     wallet.handle,
                     pool.handle,
                     theirEndpointDid
                 );
+                log.debug('fetched theirEndpoint successfully', theirEndpoint, theirEndpointVk);
             }
             if (!theirEndpointVk) {
+                log.debug('theirEndpointVk misssing, fetching from ledger');
                 theirEndpointVk = await indy.keyForDid(pool.handle, wallet.handle, theirEndpointDid);
+                log.debug('fetched theirEndpointVk successfully', theirEndpointVk);
             }
             if (!theirVk) {
+                log.debug('theirVk misssing, fetching from ledger');
                 theirVk = await indy.keyForDid(pool.handle, wallet.handle, theirDid);
+                log.debug('fetched theirVk successfully', theirVk);
             }
         } catch (err) {
             log.debug(
@@ -306,13 +323,29 @@ module.exports = {
             throw APIResult.badRequest('endpoint details missing from request and not found on ledger');
         }
 
+        log.debug('creating connection response');
         const connRes = await lib.connection.createConnectionResponse(wallet, theirDid, requestNonce);
+        log.debug('connection response created %j', connRes);
         const myDid = connRes.message.did;
+        log.debug('myDid is ', myDid);
         const myVk = await indy.keyForLocalDid(wallet.handle, myDid);
+        log.debug('myVk is ', myVk);
+        log.debug('storing their did...');
         await indy.storeTheirDid(wallet.handle, {
             did: theirDid,
             verkey: theirVk
         });
+        log.debug('storing their did: success');
+        log.debug('storing their endpointdid...');
+        await indy.storeTheirDid(wallet.handle, {
+            did: theirEndpointDid,
+            verkey: theirEndpointVk
+        });
+        log.debug('storing their endpointdid: success');
+        log.debug('setting endpoint for endpointdid...');
+        await indy.setEndpointForDid(wallet.handle, theirEndpointDid, theirEndpoint, theirEndpointVk);
+        log.debug('setting endpoint for endpointdid: success');
+        log.debug('creating pairwise...');
         await indy.createPairwise(
             wallet.handle,
             theirDid,
@@ -323,16 +356,22 @@ module.exports = {
                 theirEndpoint: theirEndpoint
             })
         );
-        await indy.setEndpointForDid(wallet.handle, theirEndpointDid, theirEndpoint, theirEndpointVk);
+        log.debug('creating pairwise: success');
         await Message.store(wallet.id, connRes.id, connRes.type, wallet.ownDid, theirDid, connRes);
 
+        // TODO add flag in requests/response to ask for onboarding/writing on ledger
+        // instead of doing it all the time (or should we just do it on acceptRequest?)
         // write dids to the ledger
+        // log.debug('nym request 1');
         await pool.nymRequest(wallet.handle, wallet.ownDid, myDid, myVk);
+        // log.debug('nym request 2');
         await pool.nymRequest(wallet.handle, wallet.ownDid, theirDid, theirVk);
 
         // anoncrypt inner message with theirDid
+        log.debug('anoncrypting message');
         const anoncryptMessage = await lib.crypto.anonCrypt(theirVk, connRes.message);
         // anon crypt the whole connRes again and send it
+        log.debug('sending anoncrypted message with', Object.assign({}, connRes, { message: anoncryptMessage }));
         await lib.message.sendAnoncryptMessage(
             pool.handle,
             wallet.handle,
@@ -346,46 +385,92 @@ module.exports = {
     },
 
     async acceptResponse(wallet, connReq, connRes) {
+        log.debug('accepting response for \n wallet %j\n connReq %j\n connRes %j\n', wallet, connReq, connRes);
         // decrypt message and retrieve their information
         const myDid = connRes.aud;
         const decryptedConnRes = await lib.crypto.anonDecrypt(wallet.handle, myDid, connRes.message);
         const theirDid = decryptedConnRes.did;
         const nonce = decryptedConnRes.nonce;
-        let theirVk = decryptedConnRes.theirVk;
+        let theirVk = decryptedConnRes.verkey;
         let pairwise;
         let pairwiseMeta;
-        if (connReq.message.nonce !== nonce) {
+        log.debug('initial params', myDid, theirDid, theirVk, nonce);
+        log.debug('decryptedConnRes %j', decryptedConnRes);
+        log.debug('comparing nonces', connReq.message.message.nonce, nonce);
+        if (connReq.message.message.nonce !== nonce) {
             throw APIResult.badRequest('nonce mismatch');
         }
         // if there is no verkey in the response
         if (!theirVk) {
             // it must be on the ledger!
+            log.debug('theirVk misssing, fetching from ledger');
             theirVk = await indy.keyForDid(pool.handle, wallet.handle, theirDid);
+            log.debug('fetched theirVk successfully', theirVk);
         }
 
+        pairwiseMeta = connReq.meta;
+        log.debug('pairwiseMeta %j', connReq.meta);
+
+        // set their information in the wallet
+        // this somehow prevents following operations on the wallet
+        // if it fails, i.e. we're trying to store a did twice, which
+        // may happen since endpoint Dids do not change that often
+        // see related jira: https://jira.hyperledger.org/browse/IS-802
+        // try {
+        //     log.debug('storing their endpointdid...');
+        //     await indy.storeTheirDid(wallet.handle, {
+        //         did: pairwiseMeta.theirEndpointDid,
+        //         verkey: pairwiseMeta.theirEndpointVk
+        //     });
+        //     log.debug('storing their endpointdid: success');
+        //     log.debug('setting endpoint for endpointdid...');
+        //     await indy.setEndpointForDid(
+        //         wallet.handle,
+        //         pairwiseMeta.theirEndpointDid,
+        //         pairwiseMeta.theirEndpoint,
+        //         pairwiseMeta.theirEndpointVk
+        //     );
+        //     log.debug('setting endpoint for endpointdid: success');
+        // } catch (err) {
+        //     if (err.message !== '213') {
+        //         throw err;
+        //     }
+        // }
+
         // create pairwise and store their information
+        log.debug('storing their did...');
         await indy.storeTheirDid(wallet.handle, {
             did: theirDid,
             verkey: theirVk
         });
-        pairwiseMeta = connReq.meta;
+        log.debug('storing their did: success');
+        log.debug('creating pairwise...');
         pairwise = await indy.createPairwise(
             wallet.handle,
             theirDid,
-            connReq.message.did,
+            connReq.message.message.did,
             JSON.stringify(pairwiseMeta)
         );
+        log.debug('creating pairwise: success');
 
         // create connection ack
+        log.debug('creating connection ack...');
         const connAck = await lib.connection.createConnectionAcknowledgement(myDid);
+        log.debug('creating connection ack: success');
+        log.debug('retrieve myVk');
         const myVk = await indy.keyForLocalDid(wallet.handle, myDid);
+        log.debug('retrieve myVk: success', myVk);
 
         // write dids to the ledger
-        await pool.nymRequest(wallet.handle, wallet.ownDid, myDid, myVk);
-        await pool.nymRequest(wallet.handle, wallet.ownDid, theirDid, theirVk);
+        // log.debug('nym request 1');
+        // await pool.nymRequest(wallet.handle, wallet.ownDid, myDid, myVk);
+        // log.debug('nym request 2');
+        // await pool.nymRequest(wallet.handle, wallet.ownDid, theirDid, theirVk);
 
         // authcrypt inner message with myDid and theirDid
+        log.debug('authcrypting message...');
         const authCryptedMessage = await lib.crypto.authCrypt(wallet.handle, myVk, theirVk, connAck.message);
+        log.debug('authcrypting message: success');
         // anon crypt the whole connAck again (with theirEndpointDid) and send it
         await lib.message.sendAnoncryptMessage(
             pool.handle,
