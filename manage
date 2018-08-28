@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+set -ue
+
+if [ $# -lt 2 ]
+then
+        echo "Usage: manage {run|stop|restart-api(only for azure)} {dev|azure}"
+        exit
+fi
+
+case "$1" in
+run)
+    case "$2" in
+        dev)
+            echo "Running dev with live reload"
+            docker-compose -f docker/compose-local.yaml up --build -d
+        ;;
+        azure)
+            echo "Running services for Azure VM"
+            docker-compose -f docker/compose-azure.yaml up --build -d
+        ;;
+        *) echo "Error -> Usage: manage {run|stop|restart-api(only for azure)} {dev|azure}}"
+        ;;
+    esac
+    ;;
+stop)
+    case "$2" in
+        dev)
+            echo "Tearing down dev with live reload"
+            docker-compose -f docker/compose-local.yaml down -v
+        ;;
+        azure)
+            echo "Tearing down services for Azure VM"
+            docker-compose -f docker/compose-azure.yaml down -v
+        ;;
+        *) echo "Error -> Usage: manage {run|stop|restart-api(only for azure)} {dev|azure}}"
+        ;;
+    esac
+    ;;
+restart-api)
+    if [ $2 = "azure" ]; then
+        docker-compose -f docker/compose-azure.yaml stop api
+        docker-compose -f docker/compose-azure.yaml build api
+        docker-compose -f docker/compose-azure.yaml start api
+    fi
+    ;;
+*) echo "Error -> Usage: manage {run|stop|restart-api(only for azure)} {dev|azure}}"
+   ;;
+esac

@@ -41,7 +41,7 @@ RUN apt-get update -y && apt-get install -y \
         vim
 
 ARG pool_ip
-RUN echo "pool_id $pool_ip"
+RUN echo "pool_ip $pool_ip"
 
 RUN echo "[supervisord]\n\
 logfile = /tmp/supervisord.log\n\

@@ -6,10 +6,10 @@
   "keywords": [],
   "author": "SNET TU-BERLIN",
   "license": "",
-  "main": "app.js",
+  "main": "src/app.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "DEBUG=* nodemon --inspect -r pino-debug app.js | pino",
+    "start": "node src/app.js",
+    "dev": "DEBUG=* nodemon --inspect -r pino-debug src/app.js | pino",
     "test": "NODE_ENV=testing mocha --exit",
     "pretty": "prettier --write \"*.{js,yml,yaml,json,md}\"",
     "precommit": "pretty-quick --staged"

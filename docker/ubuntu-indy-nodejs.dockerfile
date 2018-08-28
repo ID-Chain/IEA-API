@@ -2,6 +2,7 @@ FROM ubuntu:16.04
 
 ARG uid=1000
 ARG indy_stream=stable
+ARG pool_ip
 
 ENV LC_ALL="C.UTF-8"
 ENV LANG="C.UTF-8"
@@ -23,7 +24,9 @@ RUN apt-get update -y && apt-get install -y \
     libssl-dev \
     libsqlite3-dev \
     libsodium-dev \
-    curl
+    curl \
+    net-tools \
+    iputils-ping
 
 # Add indy user
 RUN useradd -ms /bin/bash -u $uid indy
@@ -46,21 +49,3 @@ RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
 RUN apt-get install -y \
         nodejs \
         build-essential
-
-ENV HOME=~
-WORKDIR $HOME
-
-RUN mkdir nodejs
-WORKDIR nodejs
-
-ENV LD_LIBRARY_PATH=$HOME/.local/lib:/usr/local/lib:/usr/lib
-
-# Copy rest of the app
-COPY . .
-
-# RUN npm install --save indy-sdk
-RUN npm install
-
-CMD [ "npm", "start" ]
-
-EXPOSE 8000

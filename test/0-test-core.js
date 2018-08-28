@@ -4,14 +4,14 @@ const vars = require('./0-test-vars');
 const agent = vars.agent;
 const bothHeaders = vars.bothHeaders;
 
-const User = require('../models/user');
-const ConnectionOffer = require('../models/connectionoffer');
-const Credential = require('../models/credential');
-const CredentialDef = require('../models/credentialdef');
-const CredentialReq = require('../models/credentialreq');
-const CredentialSchema = require('../models/credentialschema');
-const ProofReq = require('../models/proofreq');
-const Wallet = require('../models/wallet');
+const User = require('../src/models/user');
+const ConnectionOffer = require('../src/models/connectionoffer');
+const Credential = require('../src/models/credential');
+const CredentialDef = require('../src/models/credentialdef');
+const CredentialReq = require('../src/models/credentialreq');
+const CredentialSchema = require('../src/models/credentialschema');
+const ProofReq = require('../src/models/proofreq');
+const Wallet = require('../src/models/wallet');
 
 async function createUser(user) {
     let username = user.username;

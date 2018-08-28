@@ -18,7 +18,7 @@ const acceptHeader = vars.acceptHeader;
 const bothHeaders = vars.bothHeaders;
 let users = vars.users;
 let valuesToDelete = [];
-const User = require('../models/user');
+const User = require('../src/models/user');
 
 describe('authentication layer', function() {
     before(async function() {

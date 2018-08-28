@@ -1,0 +1,53 @@
+version: '3'
+services:
+  pool:
+    build:
+      context: ..
+      dockerfile: ./docker/indy-pool.dockerfile
+      args:
+        - pool_ip=${pool_ip}
+    ports:
+      - 9701-9708:9701-9708
+    networks:
+      indy-network:
+        ipv4_address: ${pool_ip}
+
+  mongodb:
+    image: mongo:latest
+    environment:
+      - MONGO_DATA_DIR=/data/db
+      - MONGO_LOG_DIR=/dev/null
+    ports:
+      - 27017:27017
+    command: mongod --smallfiles
+    networks:
+      indy-network:
+        ipv4_address: ${pool_network_base}.200
+  api:
+    build:
+      context: ..
+      dockerfile: ./docker/api-reload.dockerfile
+      args:
+        - pool_ip=${pool_ip}
+    command: npm run dev
+    ports:
+      - 8000:8000
+    environment:
+      - DB_HOST=${pool_network_base}.200
+      - APP_HOST=${pool_network_base}.250
+    volumes:
+      - ..:/var/app/
+    networks:
+      indy-network:
+        ipv4_address: ${pool_network_base}.250
+    depends_on:
+      - pool
+      - mongodb
+
+networks:
+  indy-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: ${pool_network_base}.0/24

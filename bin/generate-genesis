@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+pool_ip=$1
+
+# Generate network pool
+sed 's/${HOST_IP}/'${pool_ip}'/g' pool_transactions_genesis.test-template > pool_transactions_genesis.test
+echo $(cat pool_transactions_genesis.test)
+

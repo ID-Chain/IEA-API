@@ -12,8 +12,8 @@ const swaggerDoc = YAML.load('./swagger.yaml');
 
 const log = require('./log').log;
 const pool = require('./pool');
-const middleware = require('./middleware');
-const routes = require('./routes');
+const middleware = require('./middleware/index');
+const routes = require('./routes/index');
 const message = require('./controllers/message');
 
 const app = express();
