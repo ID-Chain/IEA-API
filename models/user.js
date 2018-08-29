@@ -19,6 +19,13 @@ const schema = new Mongoose.Schema({
     password: {
         type: String,
         required: true
+    },
+    role: {
+        type: String,
+        defaults: 'Guest'
+    },
+    permissions: {
+        type: [String]
     }
 });
 

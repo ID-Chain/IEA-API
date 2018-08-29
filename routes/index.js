@@ -5,6 +5,7 @@
 const router = require('express').Router();
 
 const auth = require('../middleware/auth');
+const rbac = require('../middleware/rbac');
 const walletProvider = require('../middleware/walletProvider');
 const user = require('../controllers/user');
 const wallet = require('../controllers/wallet');
@@ -28,8 +29,9 @@ router.post('/login', auth.login);
 router.route('/endpoint').post(endpoint.handle);
 
 router.use(auth);
-router.use(walletProvider.before);
-router.param('wallet', walletProvider.param);
+router.use(rbac);
+// router.use(walletProvider.before);
+// router.param('wallet', walletProvider.param);
 
 router
     .route('/user/:user')
@@ -98,6 +100,6 @@ router
     .get(message.retrieve)
     .delete(message.delete);
 
-router.use(walletProvider.after);
+// router.use(walletProvider.after);
 
 module.exports = router;
