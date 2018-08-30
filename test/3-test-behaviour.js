@@ -20,7 +20,6 @@ const acceptHeader = vars.acceptHeader;
 const bothHeaders = vars.bothHeaders;
 let users = vars.users;
 let wallets = vars.wallets;
-let valuesToDelete = [];
 let connectionOffer;
 
 let issuer;

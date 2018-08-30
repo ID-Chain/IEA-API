@@ -30,8 +30,8 @@ router.route('/endpoint').post(endpoint.handle);
 
 router.use(auth);
 router.use(rbac);
-// router.use(walletProvider.before);
-// router.param('wallet', walletProvider.param);
+router.use(walletProvider.before);
+router.param('wallet', walletProvider.param);
 
 router
     .route('/user/:user')
@@ -100,6 +100,6 @@ router
     .get(message.retrieve)
     .delete(message.delete);
 
-// router.use(walletProvider.after);
+router.use(walletProvider.after);
 
 module.exports = router;

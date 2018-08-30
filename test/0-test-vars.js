@@ -3,7 +3,10 @@
  * Test Variables
  */
 
-require('dotenv').config();
+require('dotenv').config({
+    path: './.env.test'
+});
+
 const supertest = require('supertest');
 
 module.exports.serverURL = `http://${process.env.APP_HOST}:${process.env.APP_PORT}`;

@@ -5,7 +5,7 @@
 'use strict';
 
 const wrap = require('../asyncwrap').wrap;
-const log = require();
+const log = require('./../log');
 const APIResult = require('../api-result');
 const permissions = require('../models/permissions');
 const Role = require('../models/Role');
