@@ -9,7 +9,7 @@ class APIResult {
      * @param {Object} data response data
      * @param {Object} error an error
      */
-    constructor(status, data, error) {
+    constructor(status, data = null, error = null) {
         this.status = status;
         this.data = data;
         this.error = error;
@@ -36,6 +36,10 @@ class APIResult {
         return badRequest;
     }
 
+    static unauthorizedRequest() {
+        return unauthorizedRequest;
+    }
+
     /**
      * @return {APIResult} APIResult with status 404
      */
@@ -48,5 +52,6 @@ const accepted = new APIResult(202);
 const noContent = new APIResult(204);
 const badRequest = new APIResult(400);
 const notFound = new APIResult(404);
+const unauthorizedRequest = new APIResult(401);
 
 module.exports = APIResult;

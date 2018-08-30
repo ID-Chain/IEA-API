@@ -12,6 +12,8 @@ const CredentialReq = require('../models/credentialreq');
 const CredentialSchema = require('../models/credentialschema');
 const ProofReq = require('../models/proofreq');
 const Wallet = require('../models/wallet');
+const Role = require('../models/role');
+const Permissions = require('../models/permissions').API_PERMISSIONS;
 
 async function createUser(user) {
     let username = user.username;
@@ -24,6 +26,13 @@ async function createUser(user) {
         .expect(201);
     const id = res.get('location').substring(6);
     user.id = id;
+
+    if (user.role != null) {
+        const u = await User.findOne({ _id: id });
+        u.role = user.role;
+        await u.save();
+    }
+
     return id;
 }
 
@@ -53,16 +62,17 @@ async function cleanUp() {
     await CredentialSchema.remove({});
     await ProofReq.remove({});
     await Wallet.remove({});
+    await Role.remove({});
 }
 
 function generateUsers() {
     const randomNumber = Math.round(Math.random() * 100);
 
     return [
-        { username: 'teststeward' + randomNumber, password: 'steward' },
-        { username: 'testissuer' + randomNumber, password: 'issuer' },
-        { username: 'testholder' + randomNumber, password: 'holder' },
-        { username: 'testrelyingpary' + randomNumber, password: 'relyingpary' }
+        { role: 'admin', username: 'teststeward' + randomNumber, password: 'steward' },
+        { role: 'admin', username: 'testissuer' + randomNumber, password: 'issuer' },
+        { role: 'admin', username: 'testholder' + randomNumber, password: 'holder' },
+        { role: 'admin', username: 'testrelyingpary' + randomNumber, password: 'relyingpary' }
     ];
 }
 
@@ -81,11 +91,22 @@ function generateWallets() {
     ];
 }
 
+async function createAdminRole() {
+    let adminRole = new Role({
+        title: 'admin',
+        permissions: Object.values(Permissions)
+    });
+    try {
+        await adminRole.save();
+    } catch (e) {}
+}
+
 module.exports = {
     createUser,
     login,
     createWallet,
     cleanUp,
     generateUsers,
-    generateWallets
+    generateWallets,
+    createAdminRole
 };

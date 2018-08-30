@@ -5,10 +5,10 @@
 'use strict';
 
 const wrap = require('../asyncwrap').wrap;
-const log = require('./../log');
+const log = require('./../log').log;
 const APIResult = require('../api-result');
 const permissions = require('../models/permissions');
-const Role = require('../models/Role');
+const Role = require('../models/role');
 
 const api = permissions.API_PERMISSIONS;
 
@@ -100,11 +100,19 @@ function getPermission(method, url) {
 
 async function checkRolesPermissions(roleName, permission) {
     const role = await Role.findOne({ title: roleName });
+    if (role == null) {
+        return false;
+    }
+
     const permissions = role.permissions;
     return permissions.indexOf(permission) !== -1;
 }
 
 function checkUserPermissions(permissions, permission) {
+    if (permissions == null) {
+        return false;
+    }
+
     return permissions.indexOf(permission) !== -1;
 }
 
@@ -119,25 +127,27 @@ async function middleware(req, res, next) {
     const url = req.originalUrl;
     const user = req.user;
 
-    log(`url ${url} method ${req.method}`);
-    log(`user ${user.username}`);
+    log.info(`url ${url} method ${req.method}`);
+    log.info(`user ${user.username}`);
 
     const permission = getPermission(req.method, url);
     if (permission == null) {
-        log(`no permission for ${req.method} ${url} `);
+        log.info(`no permission for ${req.method} ${url} `);
         return next();
     }
 
     const role = user.role;
-    const hasRolePermission = await checkRolesPermissions(role, permission);
-    const hasDirectPermission = checkUserPermissions(user, permission);
+    const permissions = user.permissions;
 
-    log(`hasRolePermission ${hasRolePermission}`);
-    log(`hasDirectPermission ${hasDirectPermission}`);
+    const hasRolePermission = await checkRolesPermissions(role, permission);
+    const hasDirectPermission = checkUserPermissions(permissions, permission);
+
+    log.info(`hasRolePermission ${hasRolePermission}`);
+    log.info(`hasDirectPermission ${hasDirectPermission}`);
 
     const valid = hasRolePermission || hasDirectPermission;
     if (!valid) {
-        next(APIResult.badRequest());
+        next(APIResult.unauthorizedRequest());
     } else {
         next();
     }

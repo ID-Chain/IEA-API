@@ -33,6 +33,8 @@ describe('behaviour', function() {
     before(async function() {
         this.timeout(60000);
 
+        // await core.cleanUp();
+        await core.createAdminRole();
         users = core.generateUsers();
         wallets = core.generateWallets();
 

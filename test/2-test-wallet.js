@@ -18,7 +18,9 @@ const it = mocha.it;
 const agent = vars.agent;
 const bothHeaders = vars.bothHeaders;
 const acceptHeader = vars.acceptHeader;
-let valuesToDelete = [];
+const valuesToDelete = [];
+
+const User = require('../models/user');
 
 describe('/api/wallet', function() {
     let testuser;
@@ -26,6 +28,8 @@ describe('/api/wallet', function() {
 
     beforeEach(async function() {
         this.timeout(60000);
+
+        await core.cleanUp();
 
         testuser = { username: 'testuser' + Math.random(), password: 'testpassword' };
         testwallet = { name: 'testwallet' + Math.random(), credentials: { key: 'testkey' } };
@@ -35,6 +39,12 @@ describe('/api/wallet', function() {
         const res = await core.login(testuser);
         testuser.token = res.body.token;
         bothHeaders.Authorization = testuser.token;
+
+        await core.createAdminRole();
+
+        const user = await User.findOne({ username: testuser.username });
+        user.role = 'admin';
+        await user.save();
     });
 
     afterEach(async function() {
@@ -110,17 +120,5 @@ describe('/api/wallet', function() {
             .delete(`/api/wallet/${testwallet.id}`)
             .set(bothHeaders)
             .expect(204);
-    });
-
-    afterEach(async function() {
-        this.timeout(60000);
-
-        valuesToDelete.reverse();
-        for (const v of valuesToDelete) {
-            await agent
-                .delete(`/api/${v.path}/${v.id}`)
-                .auth(...v.auth)
-                .set(acceptHeader);
-        }
     });
 });
