@@ -4,7 +4,7 @@
  */
 
 require('dotenv').config({
-    path: './.env.test'
+    path: './.env'
 });
 
 const supertest = require('supertest');
