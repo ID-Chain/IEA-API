@@ -6,10 +6,10 @@
 class APIResult {
     /**
      * @param {number} status HTTP status code
-     * @param {Object} data response data
-     * @param {Object} error an error
+     * @param {Object} [data] response data
+     * @param {Object} [error] an error
      */
-    constructor(status, data = null, error = null) {
+    constructor(status, data, error) {
         this.status = status;
         this.data = data;
         this.error = error;
@@ -83,7 +83,7 @@ class APIResult {
     }
 
     static unauthorizedRequest() {
-        return unauthorizedRequest;
+        return unauthorized;
     }
 
     /**
@@ -114,8 +114,8 @@ const created = new APIResult(201);
 const accepted = new APIResult(202);
 const noContent = new APIResult(204);
 const badRequest = new APIResult(400);
+const unauthorized = new APIResult(401);
 const forbidden = new APIResult(403);
 const notFound = new APIResult(404);
-const unauthorizedRequest = new APIResult(401);
 
 module.exports = APIResult;

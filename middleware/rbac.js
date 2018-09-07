@@ -7,10 +7,8 @@
 const wrap = require('../asyncwrap').wrap;
 const log = require('./../log').log;
 const APIResult = require('../api-result');
-const permissions = require('../models/permissions');
+const api = require('../models/permissions');
 const Role = require('../models/role');
-
-const api = permissions.API_PERMISSIONS;
 
 const methods = {
     '/api/indy': {

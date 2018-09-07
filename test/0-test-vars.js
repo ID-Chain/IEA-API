@@ -3,9 +3,7 @@
  * Test Variables
  */
 
-require('dotenv').config({
-    path: './.env'
-});
+require('dotenv').config();
 
 const supertest = require('supertest');
 

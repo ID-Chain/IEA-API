@@ -23,6 +23,12 @@ const schema = new Mongoose.Schema({
     wallet: {
         type: String,
         ref: 'Wallet'
+    },
+    permissions: {
+        type: [String]
+    },
+    role: {
+        type: String
     }
 });
 
