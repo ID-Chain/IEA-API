@@ -7,6 +7,7 @@ const SALTROUNDS = parseInt(process.env.SALTROUNDS);
 const bcrypt = require('bcrypt');
 const Mongoose = require('../db');
 const WalletProvider = require('../middleware/walletProvider');
+const Permissions = require('../models/permissions');
 
 const schema = new Mongoose.Schema({
     // TODO should we use email instead?
@@ -25,7 +26,8 @@ const schema = new Mongoose.Schema({
         ref: 'Wallet'
     },
     permissions: {
-        type: [String]
+        type: [String],
+        enum: Object.values(Permissions)
     },
     role: {
         type: String
