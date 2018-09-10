@@ -94,7 +94,7 @@ function generateWallets() {
 async function createAdminRole() {
     let adminRole = new Role({
         title: 'admin',
-        permissions: Object.values(Permissions)
+        permissions: Object.values(Permissions.allPermissions)
     });
     try {
         await adminRole.save();

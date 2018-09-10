@@ -27,7 +27,7 @@ const schema = new Mongoose.Schema({
     },
     permissions: {
         type: [String],
-        enum: Object.values(Permissions)
+        enum: Object.values(Permissions.allPermissions)
     },
     role: {
         type: String

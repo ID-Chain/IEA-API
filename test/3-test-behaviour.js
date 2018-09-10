@@ -102,6 +102,7 @@ describe('behaviour', function() {
             expect(res.body).to.have.all.keys('myDid', 'theirDid');
             wallets[1].ownDid = res.body.myDid;
         });
+
         it('issuer should should NOT accept connectionoffer from steward repeatedly', async function() {
             bothHeaders.Authorization = users[1].token;
             await agent
@@ -110,6 +111,7 @@ describe('behaviour', function() {
                 .send({ wallet: wallets[1].id, connectionOffer: connectionOffer })
                 .expect(404);
         });
+
         it('steward should create connectionoffers for relyingpary with role TRUST_ANCHOR', async function() {
             bothHeaders.Authorization = users[0].token;
             const res = await agent
@@ -121,6 +123,7 @@ describe('behaviour', function() {
             expect(res.body.role).to.equal('TRUST_ANCHOR');
             connectionOffer = res.body;
         });
+
         it('relyingpary should accept connectionoffer from steward', async function() {
             bothHeaders.Authorization = users[3].token;
             const res = await agent
@@ -130,6 +133,7 @@ describe('behaviour', function() {
                 .expect(200);
             expect(res.body).to.have.all.keys('myDid', 'theirDid');
         });
+
         it('issuer (TRUST_ANCHOR) should create connectionoffer for holder with role NONE', async function() {
             bothHeaders.Authorization = users[1].token;
             const res = await agent
@@ -141,6 +145,7 @@ describe('behaviour', function() {
             expect(res.body.role).to.equal('NONE');
             connectionOffer = res.body;
         });
+
         it('holder should accept connectionoffer from issuer', async function() {
             bothHeaders.Authorization = users[2].token;
 
@@ -152,6 +157,7 @@ describe('behaviour', function() {
             expect(res.body).to.have.all.keys('myDid', 'theirDid');
             holderIssuerDid = res.body.myDid;
         });
+
         it('holder (NONE) should NOT be able to create connectionOffers', async function() {
             bothHeaders.Authorization = users[2].token;
             await agent
@@ -164,6 +170,24 @@ describe('behaviour', function() {
 
     describe('messaging', function() {
         let messageId;
+
+        before(async function() {
+            bothHeaders.Authorization = users[0].token;
+            const res0 = await agent
+                .post('/api/connectionoffer')
+                .set(bothHeaders)
+                .send({ wallet: wallets[0].id, role: 'TRUST_ANCHOR' })
+                .expect(201);
+            connectionOffer = res0.body;
+
+            bothHeaders.Authorization = users[1].token;
+            const res1 = await agent
+                .post('/api/connection')
+                .set(bothHeaders)
+                .send({ wallet: wallets[1].id, connectionOffer: connectionOffer, endpoint: `${vars.serverURL}/indy` })
+                .expect(200);
+            wallets[1].ownDid = res1.body.myDid;
+        });
 
         it('POST /api/message should return HTTP 202 on valid connection request', async function() {
             bothHeaders.Authorization = users[0].token;

@@ -4,7 +4,7 @@
  */
 
 const Mongoose = require('../db');
-const permissions = require('./permissions');
+const permissions = require('./permissions').allPermissions;
 
 const schema = new Mongoose.Schema({
     title: {
