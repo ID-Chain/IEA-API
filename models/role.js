@@ -4,6 +4,7 @@
  */
 
 const Mongoose = require('../db');
+const permissions = require('./permissions');
 
 const schema = new Mongoose.Schema({
     title: {
@@ -13,7 +14,8 @@ const schema = new Mongoose.Schema({
         required: true
     },
     permissions: {
-        type: [String]
+        type: [String],
+        enum: Object.values(permissions)
     }
 });
 

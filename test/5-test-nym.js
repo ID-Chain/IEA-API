@@ -29,7 +29,8 @@ const steward = {
 describe('/api/nym', function() {
     before(async function() {
         this.timeout(60000);
-        const user = { username: steward.username, password: steward.password };
+        await core.createAdminRole();
+        const user = { username: steward.username, password: steward.password, role: 'admin' };
         steward.id = await core.createUser(user);
         steward.token = (await core.login(user)).body.token;
         steward.wallet.ownDid = (await core.createWallet(steward.token, steward.wallet)).body.ownDid;

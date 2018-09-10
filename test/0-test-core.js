@@ -13,7 +13,7 @@ const CredentialSchema = require('../models/credentialschema');
 const ProofReq = require('../models/proofreq');
 const Wallet = require('../models/wallet');
 const Role = require('../models/role');
-const Permissions = require('../models/permissions').API_PERMISSIONS;
+const Permissions = require('../models/permissions');
 
 async function createUser(user) {
     let username = user.username;
