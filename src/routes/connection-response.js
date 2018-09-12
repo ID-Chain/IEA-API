@@ -5,7 +5,7 @@
 'use strict';
 
 const router = require('express').Router();
-const controller = require('../controllers/connection');
+const controller = require('../controllers/connection/index');
 const wrap = require('../asyncwrap').wrap;
 const APIResult = require('../api-result');
 
