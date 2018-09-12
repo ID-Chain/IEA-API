@@ -10,6 +10,7 @@ const user = require('../controllers/user');
 const wallet = require('../controllers/wallet');
 const connection = require('../controllers/connection');
 const schema = require('../controllers/credentialschema');
+const hschema = require('../controllers/highlevelschema');
 const creddef = require('../controllers/credentialdef');
 const credential = require('../controllers/credential');
 const credoffer = require('../controllers/credentialoffer');
@@ -58,6 +59,16 @@ router
     .post(schema.create);
 
 router.route('/schema/:schema/').get(schema.retrieve);
+
+router
+    .route('/hschema')
+    .get(hschema.list)
+    .post(hschema.create);
+
+router
+    .route('/hschema/:hschema/')
+    .get(hschema.retrieve)
+    .put(hschema.update);
 
 router
     .route('/credentialdef/')

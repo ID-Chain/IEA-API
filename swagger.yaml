@@ -670,6 +670,57 @@ paths:
           description: ''
       tags:
         - proof
+  /api/hschema:
+    get:
+      security:
+        - Bearer: []
+      summary: List high-level schemas
+      description: List high-level schemas
+      responses:
+        '200':
+          description: ''
+    post:
+      security:
+        - Bearer: []
+      summary: Typechecks, compiles and creates a high-level Schema
+      description: Typechecks, compiles and creates a high-level Schema
+      parameters:
+        - in: body
+          name: data
+          schema:
+            $ref: '#/definitions/schema_post'
+      responses:
+        '201':
+          description: ''
+  /api/hschema/{hschemaid}:
+    parameters:
+      - description: A unique string value identifying this schema.
+        in: path
+        name: hschemaid
+        required: true
+        type: string
+      - description: A unique value identifying this wallet.
+        in: header
+        name: wallet
+        required: false
+        type: string
+    get:
+      security:
+        - Bearer: []
+      summary: Retrieve a high-level schema
+      description: Retrieve a high-level schema
+      responses:
+        '200':
+          description: ''
+    put:
+      security:
+        - Bearer: []
+      summary: Typechecks, compiles and updates a high-level Schema
+      description: Retrieve a high-level schema
+      responses:
+        '200':
+          description: ''
+
   /api/schema:
     get:
       security:
