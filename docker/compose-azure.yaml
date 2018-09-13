@@ -41,15 +41,15 @@ services:
       - pool
       - mongodb
 
-  schema-compiler:
-    build:
-      context: ../schema-api
-    container_name: schema-compiler
-    ports:
-      - 9000:9000
-    networks:
-      indy-network:
-        ipv4_address: 172.16.0.201
+#  schema-compiler:
+#    build:
+#      context: ../schema-api
+#    container_name: schema-compiler
+#    ports:
+#      - 9000:9000
+#    networks:
+#      indy-network:
+#        ipv4_address: 172.16.0.201
 
 networks:
   indy-network:
