@@ -2,6 +2,12 @@
 
 pool_ip=$1
 
+if [ -z "$1" ]
+  then
+    echo "No argument with pool IP supplied"
+    exit -1
+fi
+
 # Generate network pool
 sed 's/${HOST_IP}/'${pool_ip}'/g' pool_transactions_genesis.test-template > pool_transactions_genesis.test
 echo $(cat pool_transactions_genesis.test)

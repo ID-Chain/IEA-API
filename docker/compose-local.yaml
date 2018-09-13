@@ -27,14 +27,12 @@ services:
     build:
       context: ..
       dockerfile: ./docker/api-reload.dockerfile
-      args:
-        - pool_ip=${pool_ip}
-    command: npm run dev
     ports:
       - 8000:8000
     environment:
       - DB_HOST=${pool_network_base}.200
       - APP_HOST=${pool_network_base}.250
+      - POOL_IP=${pool_ip}
     volumes:
       - ..:/var/app/
     networks:

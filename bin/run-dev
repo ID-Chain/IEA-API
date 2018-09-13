@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+pool_ip=$1
+
+if [ -z "$1" ]
+  then
+    echo "No argument with pool IP supplied"
+    exit -1
+fi
+
+./bin/generate-genesis ${pool_ip}
+
+npm install
+npm run dev
