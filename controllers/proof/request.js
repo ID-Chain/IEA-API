@@ -9,7 +9,9 @@ const log = require('../../log').log;
 const Mongoose = require('../../db');
 const APIResult = require('../../api-result');
 
+const Proof = Mongoose.model('Proof');
 const Message = Mongoose.model('Message');
+const ProofRequestTemplate = Mongoose.model('ProofRequestTemplate');
 const messageTypes = lib.message.messageTypes;
 
 module.exports = {
@@ -30,13 +32,13 @@ module.exports = {
      * @param {Wallet} wallet
      * @param {string} recipientDid
      * @param {(string | object)} proofRequest _id of proof request template or proof request object
-     * @param {string} [proofCallback] callback URL to HTTP POST with proof and verification
      * @return {Promise<Message>}
      */
-    async create(wallet, recipientDid, proofRequest, proofCallback) {
+    async create(wallet, recipientDid, proofRequest) {
+        // proofRequest === string -> it is a template _id so retrieve it
         if (typeof proofRequest === 'string') {
-            // TODO retrieve proof request template
-            throw APIResult.create(501, 'proof request templates are not yet implemented');
+            const templateDoc = await ProofRequestTemplate.findById(proofRequest).exec();
+            proofRequest = templateDoc ? templateDoc.template : null;
         }
         if (!proofRequest) {
             throw APIResult.badRequest('invalid proof request or no applicable proof request template found');
@@ -45,7 +47,13 @@ module.exports = {
             throw APIResult.badRequest('invalid recipientDid, no pairwise exists');
         }
         const message = await lib.proof.createProofRequest(wallet.handle, recipientDid, proofRequest);
-        const meta = proofCallback ? { proofCallback: proofCallback } : {};
+
+        // create placeholder for expected proof, this will allow for checking the status later on
+        const proof = await new Proof({
+            wallet: wallet.id,
+            did: recipientDid
+        }).save();
+
         const doc = await Message.store(
             wallet.id,
             message.message.nonce,
@@ -53,7 +61,7 @@ module.exports = {
             wallet.ownDid,
             recipientDid,
             message,
-            meta
+            { proofId: proof.id }
         );
         await lib.message.sendAuthcryptMessage(wallet.handle, recipientDid, message);
 

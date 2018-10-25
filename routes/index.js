@@ -77,7 +77,7 @@ router
 
 router.route('/credentialdef/:credDefId/').get(creddef.retrieve);
 
-router.use('/proofRequest', proofRequest);
+router.use('/proofrequest', proofRequest);
 
 // router.route('/proof').post(proof.createProof);
 //

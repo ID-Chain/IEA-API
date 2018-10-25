@@ -256,11 +256,11 @@ describe('attestation (schemas, credentials, and proofs)', function() {
     describe('proofs', function() {
         // testcase-local variables
         let proofRequest;
+        let proof;
 
         it('relying party should create/send proof request and holder should receive it', async function() {
             const res = await agent
                 .post('/api/proofrequest')
-                .auth(rp.username, rp.password)
                 .set(bothHeaders)
                 .set({ Authorization: rp.token })
                 .send({
@@ -293,7 +293,8 @@ describe('attestation (schemas, credentials, and proofs)', function() {
                     }
                 })
                 .expect(201);
-            expect(res.body).to.contain.keys('id', 'type', 'messageId', 'message');
+            expect(res.body).to.contain.keys('id', 'type', 'messageId', 'message', 'meta');
+            expect(res.body.meta).to.have.property('proofId');
             expect(res.body.message.message).to.contain.keys(
                 'name',
                 'version',
@@ -301,6 +302,7 @@ describe('attestation (schemas, credentials, and proofs)', function() {
                 'requested_attributes',
                 'requested_predicates'
             );
+            proof = { id: res.body.meta.proofId };
 
             const res2 = await agent
                 .get('/api/proofrequest')
@@ -313,6 +315,19 @@ describe('attestation (schemas, credentials, and proofs)', function() {
             // check that nonces match
             expect(res2.body[0]).to.have.property('messageId', res.body.messageId);
             proofRequest = res2.body[0];
+        });
+
+        it.skip('relying party should query proof status using proofId', async function() {
+            const res = await agent
+                .get('/api/proof/' + proof.id)
+                .set(bothHeaders)
+                .set({ Authorization: rp.token })
+                .expect(200);
+            expect(res.body).to.contain.keys('id', 'wallet', 'theirDid', 'proof', 'status', 'isValid');
+            expect(res.body.theirDid).to.equal(holderRPDid);
+            expect(res.body.proof).to.be.null;
+            expect(res.body.status).to.equal('pending');
+            expect(res.body.isValid).to.be.false;
         });
 
         it.skip('holder should accept proof request and create/send proof', async function() {
