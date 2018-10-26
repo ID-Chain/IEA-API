@@ -84,5 +84,12 @@ module.exports = {
         const submitterDid = req.wallet.ownDid;
         const [, credDef] = await pool.getCredDef(submitterDid, credDefId);
         next(new APIResult(200, credDef));
+    }),
+
+    retrieveTails: wrap(async (req, res, next) => {
+        CredDef.findOne({ credDefId: req.credDefId }, function(err, tails) {
+            if (err) next(new APIResult(404));
+            else next(new APIResult(200, tails.toString('base64')));
+        });
     })
 };

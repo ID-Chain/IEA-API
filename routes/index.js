@@ -74,6 +74,8 @@ router
 
 router.route('/credentialdef/:credDefId/').get(creddef.retrieve);
 
+router.route('/tails/:credDefId/').get(creddef.retrieveTails);
+
 router.route('/credentialoffer/').post(credoffer.create);
 
 router.route('/credentialrequest/').post(credoffer.accept);
