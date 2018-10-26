@@ -21,6 +21,9 @@ const schema = new Mongoose.Schema({
     revocRegType: {
         type: String
     },
+    revocRegTails: {
+        type: String
+    },
     wallet: {
         type: String,
         ref: 'Wallet'

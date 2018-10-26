@@ -9,6 +9,7 @@ const CredDef = require('../models/credentialdef');
 const wrap = require('../asyncwrap').wrap;
 const pool = require('../pool');
 const APIResult = require('../api-result');
+const fs = require('fs');
 
 module.exports = {
     create: wrap(async (req, res, next) => {
@@ -35,9 +36,11 @@ module.exports = {
             const blobStorageWriter = await pool.openBlobStorageWriter();
             // supported config keys depend on credential type
             // currently, indy only supports CL_ACCUM as credential type
+            // the max_cred_num is set to 100 to prevent this code from taking too long to generate tails
+            // note that tails occupy  256 * max_cred_num bytes + 130 bytes of the header
             const revocRegConfig = {
                 issuance_type: 'ISSUANCE_ON_DEMAND',
-                max_cred_num: 1000
+                max_cred_num: 100
             };
             const [revocRegId, revocRegDef, revocRegEntry] = await indy.issuerCreateAndStoreRevocReg(
                 req.wallet.handle,
@@ -58,6 +61,13 @@ module.exports = {
             );
             doc.revocRegId = revocRegId;
             doc.revocRegType = revocRegDef.revocDefType;
+
+            // read back  the tails from the file created by default Indy BlobStorageWriter
+            fs.readFile(revocRegDef.tailsLocation, (err, data) => {
+                if (err) throw err;
+                doc.revocRegTails = data;
+            });
+            // todo: validate the hash of `doc.revocRegTails` using value of `revocRegDef.tailsHash`
         }
 
         const credDefDoc = await new CredDef(doc).save();
