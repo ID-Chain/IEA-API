@@ -9,7 +9,7 @@ const CredDef = require('../models/credentialdef');
 const RevocRegistry = require('../models/revocation-registry');
 const wrap = require('../asyncwrap').wrap;
 const pool = require('../pool');
-const blobstorage = require('../lib/revocation-registry');
+const revocationLib = require('../lib/revocation-registry');
 const APIResult = require('../api-result');
 const fs = require('fs');
 
@@ -43,10 +43,10 @@ module.exports = {
         let tailsdoc = {};
 
         if (supportRevocation) {
-            let blobStorageConfig = { base_dir: blobstorage.tailsBaseDir, uri_pattern: '' };
+            let blobStorageConfig = { base_dir: revocationLib.tailsBaseDir, uri_pattern: '' };
             // TODO: investigate the purpose of uri_pattern
 
-            const blobStorageWriter = await blobstorage.openBlobStorageWriter(blobStorageConfig);
+            const blobStorageWriter = await revocationLib.openBlobStorageWriter(blobStorageConfig);
             // supported config keys depend on credential type
             // currently, indy only supports CL_ACCUM as credential type
             // the max_cred_num is set to 100 to prevent this code from taking too long to generate tails
@@ -75,7 +75,7 @@ module.exports = {
                 req.wallet.handle,
                 req.wallet.ownDid,
                 revocRegId,
-                revocRegDef.revocDefType,
+                revocationLib.revocationType,
                 revocRegEntry
             );
             doc.revocRegId = revocRegId;

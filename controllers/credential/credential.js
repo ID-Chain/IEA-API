@@ -17,7 +17,7 @@ const messageTypes = lib.message.messageTypes;
 
 const CredDef = require('../../models/credentialdef');
 const RevReg = require('../../models/revocation-registry');
-const blobstorage = require('../lib/revocation-registry');
+const revocationLib = require('../lib/revocation-registry');
 const fs = require('fs');
 
 module.exports = {
@@ -75,18 +75,24 @@ module.exports = {
 
         let credentialRequestJson = credentialRequest.message.message;
         const credDefId = credentialRequestJson['cred_def_id'];
-        const credDef = await CredDef.findOne({ credDefId: credDefId });
+        let credDef = null;
+        await CredDef.findOne({ credDefId: credDefId }, function(err, result) {
+            if (err) throw err;
+            credDef = result;
+        });
         let revocRegId = credDef.revocRegId;
         let blobStorageReaderHandler = null;
-        if (revocRegId.length > 0) {
+        const useRevocations = revocRegId && revocRegId.length > 0;
+
+        if (useRevocations) {
             const revReg = await RevReg.findOne({ revocRegDefId: revocRegId }).exec();
 
-            const filename = blobstorage.tailsBaseDir + '/' + revReg.hash;
+            const filename = revocationLib.tailsBaseDir + '/' + revReg.hash;
             fs.writeFile(filename, revReg.tails, err => {
                 if (err) throw err;
             });
-            blobStorageReaderHandler = await blobstorage.openBlobStorageReader({
-                base_dir: blobstorage.tailsBaseDir,
+            blobStorageReaderHandler = await revocationLib.openBlobStorageReader({
+                base_dir: revocationLib.tailsBaseDir,
                 uri_pattern: ''
             });
         }
@@ -99,6 +105,17 @@ module.exports = {
             revocRegId,
             blobStorageReaderHandler
         );
+
+        if (useRevocations) {
+            // store new value of the accumulator
+            await pool.revocRegEntryRequest(
+                wallet.handle,
+                wallet.ownDid,
+                revocRegId,
+                revocationLib.revocationType,
+                revocRegDelta
+            );
+        }
 
         const meta = {
             credRevocId: credRevocId,
