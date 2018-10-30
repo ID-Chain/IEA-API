@@ -14,17 +14,16 @@ APP_PORT=8000
 ## e.g. https://$APP_HOST:$APP_PORT/indy
 APP_ENDPOINT=http://172.16.0.100:8000/indy
 
+# wallet cache ttl, e.g. how long to wait before closing
+# a wallet after no request is using it anymore for processing
+# (in minutes)
+APP_WALLETCACHE_TTL=15
+
 ## bcrypt saltOrRounds configuration
 SALTROUNDS=10
 
 ## change this!
 JWT_SECRET=your_jwt_secret
-
-## wallet provider/cache time between retries of opening a wallet in ms
-WALLETCACHE_WAIT_TIME=300
-
-## wallet provider/cache max retries before it fails
-WALLETCACHE_MAX_RETRIES=3
 
 ## API logger log level
 LOG_LEVEL=debug
