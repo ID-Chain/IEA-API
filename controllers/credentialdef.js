@@ -13,10 +13,6 @@ const blobstorage = require('../lib/revocation-registry');
 const APIResult = require('../api-result');
 const fs = require('fs');
 
-// the file path where `tails` are created
-// note that the content of tails is copied to local database, therefore these files can be cleaned
-const tailsBaseDir = '/tmp/indy/tails';
-
 module.exports = {
     create: wrap(async (req, res, next) => {
         const submitterDid = req.wallet.ownDid;
@@ -47,7 +43,7 @@ module.exports = {
         let tailsdoc = {};
 
         if (supportRevocation) {
-            let blobStorageConfig = { base_dir: tailsBaseDir, uri_pattern: '' };
+            let blobStorageConfig = { base_dir: blobstorage.tailsBaseDir, uri_pattern: '' };
             // TODO: investigate the purpose of uri_pattern
 
             const blobStorageWriter = await blobstorage.openBlobStorageWriter(blobStorageConfig);
@@ -69,8 +65,7 @@ module.exports = {
                 blobStorageWriter
             );
 
-            // workaround for no support beyond local file system blobstorage:
-            let tailsFileLocation = revocRegDef.tailsLocation;
+            let tailsFileLocation = revocRegDef['tailsLocation'];
             // change the URL of tails from file path to the context path
             revocRegDef['tailsLocation'] = '/tails/' + revocRegId + '/';
             // store resulting revocation registry definition to the ledger
@@ -87,11 +82,16 @@ module.exports = {
             doc.revocRegType = revocRegDef.revocDefType;
 
             tailsdoc.revocRegDefId = revocRegId;
+            tailsdoc.hash = revocRegDef['tailsHash'];
+            // foreign key
+            tailsdoc.credDefId = credDefId;
+
             // read back the tails from the file created by blobstoragewriter
             fs.readFile(tailsFileLocation, (err, data) => {
                 if (err) throw err;
                 tailsdoc.data = data;
             });
+            // todo: delete the file
             // todo: validate the hash of `doc.revocRegTails` using value of `revocRegDef.tailsHash`
         }
 

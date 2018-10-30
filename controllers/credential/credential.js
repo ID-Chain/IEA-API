@@ -15,6 +15,11 @@ const APIResult = require('../../api-result');
 const Message = Mongoose.model('Message');
 const messageTypes = lib.message.messageTypes;
 
+const CredDef = require('../../models/credentialdef');
+const RevReg = require('../../models/revocation-registry');
+const blobstorage = require('../lib/revocation-registry');
+const fs = require('fs');
+
 module.exports = {
     /**
      * List credentials in wallet
@@ -67,13 +72,32 @@ module.exports = {
         }, {});
 
         const pairwise = await lib.pairwise.getPairwise(wallet.handle, credentialRequest.message.origin);
+
+        let credentialRequestJson = credentialRequest.message.message;
+        const credDefId = credentialRequestJson['cred_def_id'];
+        const credDef = await CredDef.findOne({ credDefId: credDefId });
+        let revocRegId = credDef.revocRegId;
+        let blobStorageReaderHandler = null;
+        if (revocRegId.length > 0) {
+            const revReg = await RevReg.findOne({ revocRegDefId: revocRegId }).exec();
+
+            const filename = blobstorage.tailsBaseDir + '/' + revReg.hash;
+            fs.writeFile(filename, revReg.tails, err => {
+                if (err) throw err;
+            });
+            blobStorageReaderHandler = await blobstorage.openBlobStorageReader({
+                base_dir: blobstorage.tailsBaseDir,
+                uri_pattern: ''
+            });
+        }
+
         const [credential, credRevocId, revocRegDelta] = await lib.sdk.issuerCreateCredential(
             wallet.handle,
             credentialRequest.meta.offer,
             credentialRequest.message.message,
             credentialValues,
-            null,
-            null
+            revocRegId,
+            blobStorageReaderHandler
         );
 
         const meta = {

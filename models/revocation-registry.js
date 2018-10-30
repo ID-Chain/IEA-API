@@ -15,6 +15,13 @@ const schema = new Mongoose.Schema({
         type: String,
         index: true
     },
+    credDefId: {
+        type: String,
+        index: true
+    },
+    hash: {
+        type: String
+    },
     tails: Mixed
 });
 
