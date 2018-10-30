@@ -268,9 +268,9 @@ definitions:
   schema_post:
     type: object
     required:
-    - attributes
-    - name"
-    - version
+      - attributes
+      - name
+      - version
     properties:
       name:
         type: string
@@ -290,20 +290,20 @@ definitions:
         description: "List of attribute names put into the schema"
         items:
           required:
-          - "name"
-          - "type"
+            - name
+            - type
           properties:
             name:
-              type: "string"
+              type: string
               description: "Name of the attribute (Key)"
             type:
-              type: "string"
+              type: string
               description: "A valid type for attributes, as requested using GET /types in schema compiler API"
     example:
       name: "Passport"
       version: "1.0"
       isRevocable: false
-      parentSchemaId: ""
+      parentSchemaId: "Th7MpTaRZVRYnPiabds81Y:2:ID_NL:2.0"
       attributes:
       - name: "givenName"
         type: string
