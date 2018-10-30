@@ -6,10 +6,16 @@
 const indy = require('indy-sdk');
 
 const CredDef = require('../models/credentialdef');
+const RevocRegistry = require('../models/revocation-registry');
 const wrap = require('../asyncwrap').wrap;
 const pool = require('../pool');
+const blobstorage = require('../lib/revocation-registry');
 const APIResult = require('../api-result');
 const fs = require('fs');
+
+// the file path where `tails` are created
+// note that the content of tails is copied to local database, therefore these files can be cleaned
+const tailsBaseDir = '/tmp/indy/tails';
 
 module.exports = {
     create: wrap(async (req, res, next) => {
@@ -27,13 +33,24 @@ module.exports = {
         );
         const response = await pool.credDefRequest(req.wallet.handle, req.wallet.ownDid, credDef);
 
+        // todo: check if this response contains credDef as it was stored in ledger
+        // normally we have top read `credDef` back from ledger
+        // because the back reference to the schema txn in it is added by validator(s)
+        // The credDef w/o back reference cannot be used further in indy anoncred API
+
         let doc = {
             credDefId: credDefId,
             wallet: req.wallet.id,
             data: response['result']
         };
+
+        let tailsdoc = {};
+
         if (supportRevocation) {
-            const blobStorageWriter = await pool.openBlobStorageWriter();
+            let blobStorageConfig = { base_dir: tailsBaseDir, uri_pattern: '' };
+            // TODO: investigate the purpose of uri_pattern
+
+            const blobStorageWriter = await blobstorage.openBlobStorageWriter(blobStorageConfig);
             // supported config keys depend on credential type
             // currently, indy only supports CL_ACCUM as credential type
             // the max_cred_num is set to 100 to prevent this code from taking too long to generate tails
@@ -51,7 +68,14 @@ module.exports = {
                 revocRegConfig,
                 blobStorageWriter
             );
+
+            // workaround for no support beyond local file system blobstorage:
+            let tailsFileLocation = revocRegDef.tailsLocation;
+            // change the URL of tails from file path to the context path
+            revocRegDef['tailsLocation'] = '/tails/' + revocRegId + '/';
+            // store resulting revocation registry definition to the ledger
             await pool.revocRegDefRequest(req.wallet.handle, req.wallet.ownDid, revocRegDef);
+            // store first value of the accumulator
             await pool.revocRegEntryRequest(
                 req.wallet.handle,
                 req.wallet.ownDid,
@@ -62,15 +86,19 @@ module.exports = {
             doc.revocRegId = revocRegId;
             doc.revocRegType = revocRegDef.revocDefType;
 
-            // read back  the tails from the file created by default Indy BlobStorageWriter
-            fs.readFile(revocRegDef.tailsLocation, (err, data) => {
+            tailsdoc.revocRegDefId = revocRegId;
+            // read back the tails from the file created by blobstoragewriter
+            fs.readFile(tailsFileLocation, (err, data) => {
                 if (err) throw err;
-                doc.revocRegTails = data;
+                tailsdoc.data = data;
             });
             // todo: validate the hash of `doc.revocRegTails` using value of `revocRegDef.tailsHash`
         }
 
         const credDefDoc = await new CredDef(doc).save();
+        if (supportRevocation) {
+            await new RevocRegistry(tailsdoc).save();
+        }
         next(new APIResult(201, { credDefId: credDefDoc.credDefId }));
     }),
 
@@ -87,8 +115,9 @@ module.exports = {
     }),
 
     retrieveTails: wrap(async (req, res, next) => {
-        CredDef.findOne({ credDefId: req.credDefId }, function(err, tails) {
+        RevocRegistry.findOne({ revocRegDefId: req.revocRegDefId }, function(err, tails) {
             if (err) next(new APIResult(404));
+            // TODO: export as binary instead of base64
             else next(new APIResult(200, tails.toString('base64')));
         });
     })
