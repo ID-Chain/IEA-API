@@ -41,6 +41,9 @@ parameters:
     name: wallet
     description: '(Optional) A unique id value (or "default") identifying a wallet'
     type: string
+  revocRegDefId:
+    in: path
+    description: 'Unique string identifying revocation registry definition'
 
 definitions:
   wallet:
@@ -985,3 +988,20 @@ paths:
           description: ''
       tags:
         - message
+
+  /tails/{revocRegDefId}:
+    parameters:
+      - in: path
+        name: revocRegDefId
+        ? description
+        required: true
+        type: string
+    get:
+      summary: 'Agent Revocation Tails Endpoint'
+      description: 'Public immutable shared blob linked to given revocation registry definition'
+      security: []
+      responses:
+        '200':
+          description: ''
+      tags:
+        - proof
