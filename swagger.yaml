@@ -41,9 +41,6 @@ parameters:
     name: wallet
     description: '(Optional) A unique id value (or "default") identifying a wallet'
     type: string
-  revocRegDefId:
-    in: path
-    description: 'Unique string identifying revocation registry definition'
 
 definitions:
   wallet:
@@ -1141,7 +1138,7 @@ paths:
     parameters:
       - in: path
         name: revocRegDefId
-        ? description
+        description: 'unique id of revocation registry'
         required: true
         type: string
     get:
