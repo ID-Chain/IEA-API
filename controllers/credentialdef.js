@@ -5,32 +5,32 @@
 
 const indy = require('indy-sdk');
 
-const CredDef = require('../models/credentialdef');
+const lib = require('../lib');
 const RevocRegistry = require('../models/revocation-registry');
 const wrap = require('../asyncwrap').wrap;
 const pool = require('../pool');
 const revocationLib = require('../lib/revocation-registry');
 const APIResult = require('../api-result');
+const CredDef = require('../models/credentialdef');
 const fs = require('fs');
 
 module.exports = {
     create: wrap(async (req, res, next) => {
-        const submitterDid = req.wallet.ownDid;
         const schemaId = req.body.schemaId;
         const supportRevocation = req.body.supportRevocation || false;
-        const [, schema] = await pool.getSchema(submitterDid, schemaId);
-        const [credDefId, credDef] = await indy.issuerCreateAndStoreCredentialDef(
+        const [credDefId, credDef] = await lib.credentialdefinition.create(
             req.wallet.handle,
+            pool,
             req.wallet.ownDid,
-            schema,
+            schemaId,
             'TAG1',
             'CL',
-            { support_revocation: supportRevocation }
+            supportRevocation
         );
         const response = await pool.credDefRequest(req.wallet.handle, req.wallet.ownDid, credDef);
 
         // todo: check if this response contains credDef as it was stored in ledger
-        // normally we have top read `credDef` back from ledger
+        // normally we have to read `credDef` back from ledger
         // because the back reference to the schema txn in it is added by validator(s)
         // The credDef w/o back reference cannot be used further in indy anoncred API
 
@@ -108,10 +108,8 @@ module.exports = {
     }),
 
     retrieve: wrap(async (req, res, next) => {
-        const credDefId = req.params.credDefId;
-        const submitterDid = req.wallet.ownDid;
-        const [, credDef] = await pool.getCredDef(submitterDid, credDefId);
-        next(new APIResult(200, credDef));
+        const [, credDef] = await pool.getCredDef(req.wallet.ownDid, req.params.credDefId);
+        next(APIResult.success(credDef));
     }),
 
     retrieveTails: wrap(async (req, res, next) => {
