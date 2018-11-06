@@ -18,21 +18,24 @@ module.exports = {
     create: wrap(async (req, res, next) => {
         const schemaId = req.body.schemaId;
         const supportRevocation = req.body.supportRevocation || false;
+        const tag = req.body.tag || 'TAG1';
         const [credDefId, credDef] = await lib.credentialdefinition.create(
             req.wallet.handle,
             pool,
             req.wallet.ownDid,
             schemaId,
-            'TAG1',
-            'CL',
+            tag,
+            lib.credentialdefinition.DefaultSignatureType,
             supportRevocation
         );
+
+        // `credDef` has to be read back from ledger
+        // because the back reference to the schema txn in it is added by validator(s) only
+        // The credDef w/o back reference cannot be used further in indy anoncred API
+
         const response = await pool.credDefRequest(req.wallet.handle, req.wallet.ownDid, credDef);
 
-        // todo: check if this response contains credDef as it was stored in ledger
-        // normally we have to read `credDef` back from ledger
-        // because the back reference to the schema txn in it is added by validator(s)
-        // The credDef w/o back reference cannot be used further in indy anoncred API
+        // todo: check if there is no error in the response
 
         let doc = {
             credDefId: credDefId,
