@@ -17,7 +17,7 @@ const messageTypes = lib.message.messageTypes;
 
 const CredDef = require('../../models/credentialdef');
 const RevReg = require('../../models/revocation-registry');
-const revocationLib = require('../lib/revocation-registry');
+
 const fs = require('fs');
 
 module.exports = {
@@ -87,12 +87,12 @@ module.exports = {
         if (useRevocations) {
             const revReg = await RevReg.findOne({ revocRegDefId: revocRegId }).exec();
 
-            const filename = revocationLib.tailsBaseDir + '/' + revReg.hash;
+            const filename = lib.revocationRegistry.tailsBaseDir + '/' + revReg.hash;
             fs.writeFile(filename, revReg.tails, err => {
                 if (err) throw err;
             });
-            blobStorageReaderHandler = await revocationLib.openBlobStorageReader({
-                base_dir: revocationLib.tailsBaseDir,
+            blobStorageReaderHandler = await lib.revocationRegistry.openBlobStorageReader({
+                base_dir: lib.revocationRegistry.tailsBaseDir,
                 uri_pattern: ''
             });
         }
@@ -112,7 +112,7 @@ module.exports = {
                 wallet.handle,
                 wallet.ownDid,
                 revocRegId,
-                revocationLib.revocationType,
+                lib.revocationRegistry.revocationType,
                 revocRegDelta
             );
         }

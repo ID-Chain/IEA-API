@@ -3,16 +3,16 @@
  * Credential Definition Controller
  */
 
+const fs = require('fs');
+
 const indy = require('indy-sdk');
 
 const lib = require('../lib');
-const RevocRegistry = require('../models/revocation-registry');
 const wrap = require('../asyncwrap').wrap;
 const pool = require('../pool');
-const revocationLib = require('../lib/revocation-registry');
 const APIResult = require('../api-result');
 const CredDef = require('../models/credentialdef');
-const fs = require('fs');
+const RevocRegistry = require('../models/revocation-registry');
 
 module.exports = {
     create: wrap(async (req, res, next) => {
@@ -46,10 +46,10 @@ module.exports = {
         let tailsdoc = {};
 
         if (supportRevocation) {
-            let blobStorageConfig = { base_dir: revocationLib.tailsBaseDir, uri_pattern: '' };
+            let blobStorageConfig = { base_dir: lib.revocationRegistry.tailsBaseDir, uri_pattern: '' };
             // TODO: investigate the purpose of uri_pattern
 
-            const blobStorageWriter = await revocationLib.openBlobStorageWriter(blobStorageConfig);
+            const blobStorageWriter = await lib.revocationRegistry.openBlobStorageWriter(blobStorageConfig);
             // supported config keys depend on credential type
             // currently, indy only supports CL_ACCUM as credential type
             // the max_cred_num is set to 100 to prevent this code from taking too long to generate tails
@@ -78,7 +78,7 @@ module.exports = {
                 req.wallet.handle,
                 req.wallet.ownDid,
                 revocRegId,
-                revocationLib.revocationType,
+                lib.revocationRegistry.revocationType,
                 revocRegEntry
             );
             doc.revocRegId = revocRegId;
@@ -116,10 +116,10 @@ module.exports = {
     }),
 
     retrieveTails: wrap(async (req, res, next) => {
-        RevocRegistry.findOne({ revocRegDefId: req.revocRegDefId }, function(err, tails) {
+        RevocRegistry.findOne({ revocRegDefId: req.revocRegDefId }, function(err, registry) {
             if (err) next(new APIResult(404));
             // TODO: export as binary instead of base64
-            else next(new APIResult(200, tails.toString('base64')));
+            else next(new APIResult(200, registry.tails.toString('base64')));
         });
     })
 };
