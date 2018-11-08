@@ -73,25 +73,32 @@ module.exports = {
 
         const pairwise = await lib.pairwise.getPairwise(wallet.handle, credentialRequest.message.origin);
 
-        let credentialRequestJson = credentialRequest.message.message;
-        const credDefId = credentialRequestJson['cred_def_id'];
+        const credDefId = credentialRequest.message.message['cred_def_id'];
         let credDef = null;
-        await CredDef.findOne({ credDefId: credDefId }, function(err, result) {
-            if (err) throw err;
-            credDef = result;
-        });
-        let revocRegId = credDef.revocRegId;
-        let blobStorageReaderHandler = null;
+        credDef = await CredDef.findOne({ credDefId: credDefId }).exec();
+        if (!credDef) {
+            throw Error(credDefId + ' : credential definition not found');
+        }
+        const revocRegId = credDef.revocRegId;
+        let blobStorageReaderHandle = null;
         const useRevocations = revocRegId && revocRegId.length > 0;
 
         if (useRevocations) {
             const revReg = await RevReg.findOne({ revocRegDefId: revocRegId }).exec();
 
             const filename = lib.revocationRegistry.tailsBaseDir + '/' + revReg.hash;
-            fs.writeFile(filename, revReg.tails, err => {
-                if (err) throw err;
+
+            await new Promise((resolve, reject) => {
+                fs.writeFile(filename, revReg.tails, err => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve();
+                    }
+                });
             });
-            blobStorageReaderHandler = await lib.revocationRegistry.openBlobStorageReader({
+
+            blobStorageReaderHandle = await lib.revocationRegistry.openBlobStorageReader({
                 base_dir: lib.revocationRegistry.tailsBaseDir,
                 uri_pattern: ''
             });
@@ -103,7 +110,7 @@ module.exports = {
             credentialRequest.message.message,
             credentialValues,
             revocRegId,
-            blobStorageReaderHandler
+            blobStorageReaderHandle
         );
 
         if (useRevocations) {
@@ -173,13 +180,18 @@ module.exports = {
         const pairwise = await lib.pairwise.getPairwise(wallet.handle, message.origin);
         const [, credentialDefinition] = await pool.getCredDef(pairwise['my_did'], message.message.cred_def_id);
 
+        let revocRegDefinition = null;
+
+        if (credentialDefinition.revocRegId)
+            [, revocRegDefinition] = await pool.getRevocRegDef(pairwise['my_did'], credentialDefinition.revocRegId);
+
         await lib.sdk.proverStoreCredential(
             wallet.handle,
             null, // credId
             credentialRequest.meta,
             message.message,
             credentialDefinition,
-            null // revRegDef
+            revocRegDefinition
         );
     }
 };

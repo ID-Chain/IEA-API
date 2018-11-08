@@ -11,7 +11,7 @@ const schema = new Mongoose.Schema({
         type: Date,
         default: Date.now
     },
-    revocRegDefId: {
+    revocRegId: {
         type: String,
         index: true
     },

@@ -29,24 +29,16 @@ module.exports = {
             supportRevocation
         );
 
-        // `credDef` has to be read back from ledger
-        // because the back reference to the schema txn in it is added by validator(s) only
-        // The credDef w/o back reference cannot be used further in indy anoncred API
-
-        const response = await pool.credDefRequest(req.wallet.handle, req.wallet.ownDid, credDef);
-
-        // todo: check if there is no error in the response
-
         let doc = {
             credDefId: credDefId,
             wallet: req.wallet.id,
-            data: response['result']
+            data: credDef
         };
 
         let tailsdoc = {};
 
         if (supportRevocation) {
-            let blobStorageConfig = { base_dir: lib.revocationRegistry.tailsBaseDir, uri_pattern: '' };
+            const blobStorageConfig = { base_dir: lib.revocationRegistry.tailsBaseDir, uri_pattern: '' };
             // TODO: investigate the purpose of uri_pattern
 
             const blobStorageWriter = await lib.revocationRegistry.openBlobStorageWriter(blobStorageConfig);
@@ -84,7 +76,7 @@ module.exports = {
             doc.revocRegId = revocRegId;
             doc.revocRegType = revocRegDef.revocDefType;
 
-            tailsdoc.revocRegDefId = revocRegId;
+            tailsdoc.revocRegId = revocRegId;
             tailsdoc.hash = revocRegDef['tailsHash'];
             // foreign key
             tailsdoc.credDefId = credDefId;
@@ -94,8 +86,7 @@ module.exports = {
                 if (err) throw err;
                 tailsdoc.data = data;
             });
-            // todo: delete the file
-            // todo: validate the hash of `doc.revocRegTails` using value of `revocRegDef.tailsHash`
+            fs.unlink(tailsFileLocation);
         }
 
         const credDefDoc = await new CredDef(doc).save();
@@ -116,10 +107,10 @@ module.exports = {
     }),
 
     retrieveTails: wrap(async (req, res, next) => {
-        RevocRegistry.findOne({ revocRegDefId: req.revocRegDefId }, function(err, registry) {
-            if (err) next(new APIResult(404));
-            // TODO: export as binary instead of base64
-            else next(new APIResult(200, registry.tails.toString('base64')));
-        });
+        const registry = await RevocRegistry.findOne({ revocRegDefId: req.revocRegDefId }).exec();
+
+        if (!registry) next(new APIResult(404));
+        // TODO: export as binary instead of base64
+        else next(new APIResult(200, registry.tails.toString('base64')));
     })
 };
