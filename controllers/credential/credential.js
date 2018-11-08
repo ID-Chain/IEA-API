@@ -125,6 +125,7 @@ module.exports = {
         }
 
         const meta = {
+            revocRegId: revocRegId,
             credRevocId: credRevocId,
             revocRegDelta: revocRegDelta
         };
@@ -157,6 +158,26 @@ module.exports = {
      */
     async retrieve(wallet, id) {
         return lib.sdk.proverGetCredential(wallet.handle, id);
+    },
+
+    /**
+     * Revoke a credential
+     * @param {Wallet} wallet
+     * @param {String} id credential message id as stored in db
+     * @return {Promise<Message>}
+     */
+    async revoke(wallet, id) {
+        const message = await Message.findTypeById(wallet, id, messageTypes.credentialRequest).exec();
+        if (!message) {
+            return message;
+        }
+        // TODO blobStorageReaderHandle
+        // await lib.sdk.issuerRevokeCredential(
+        //     wallet.handle,
+        //     blobStorageReaderHandle,
+        //     message.meta.revocRegId,
+        //     message.meta.credRevocId
+        // );
     },
 
     /**
