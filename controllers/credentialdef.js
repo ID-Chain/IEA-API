@@ -82,11 +82,11 @@ module.exports = {
             tailsdoc.credDefId = credDefId;
 
             // read back the tails from the file created by blobstoragewriter
-            fs.readFile(tailsFileLocation, (err, data) => {
+            await fs.readFile(tailsFileLocation, (err, data) => {
                 if (err) throw err;
                 tailsdoc.data = data;
             });
-            fs.unlink(tailsFileLocation);
+            await fs.unlink(tailsFileLocation);
         }
 
         const credDefDoc = await new CredDef(doc).save();
@@ -107,7 +107,7 @@ module.exports = {
     }),
 
     retrieveTails: wrap(async (req, res, next) => {
-        const registry = await RevocRegistry.findOne({ revocRegDefId: req.revocRegDefId }).exec();
+        const registry = await RevocRegistry.findOne({ revocRegDefId: req.params.revocRegDefId }).exec();
 
         if (!registry) next(new APIResult(404));
         // TODO: export as binary instead of base64

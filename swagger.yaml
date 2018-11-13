@@ -113,6 +113,10 @@ definitions:
       schemaId:
         description: 'A unique string value identifying a schema'
         type: string
+      tag:
+        description: 'A string value identifying credential definition uniquely within given schema'
+        type: string
+        default: 'TAG1'
       supportRevocation:
         description: '(Optional) States if revocation should be supported for this credential definiton'
         type: boolean
