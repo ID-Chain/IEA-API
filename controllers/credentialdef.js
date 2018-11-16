@@ -82,11 +82,8 @@ module.exports = {
             tailsdoc.credDefId = credDefId;
 
             // read back the tails from the file created by blobstoragewriter
-            await fs.readFile(tailsFileLocation, (err, data) => {
-                if (err) throw err;
-                tailsdoc.data = data;
-            });
-            await fs.unlink(tailsFileLocation);
+            tailsdoc.data = fs.readFileSync(tailsFileLocation);
+            fs.unlinkSync(tailsFileLocation);
         }
 
         const credDefDoc = await new CredDef(doc).save();

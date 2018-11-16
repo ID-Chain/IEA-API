@@ -18,8 +18,6 @@ const messageTypes = lib.message.messageTypes;
 const CredDef = require('../../models/credentialdef');
 const RevReg = require('../../models/revocation-registry');
 
-const fs = require('fs');
-
 module.exports = {
     /**
      * List credentials in wallet
@@ -73,56 +71,29 @@ module.exports = {
 
         const pairwise = await lib.pairwise.getPairwise(wallet.handle, credentialRequest.message.origin);
 
+        // find credential definition
         const credDefId = credentialRequest.message.message['cred_def_id'];
-        let credDef = null;
-        credDef = await CredDef.findOne({ credDefId: credDefId }).exec();
+        const credDef = await CredDef.findOne({ credDefId: credDefId }).exec();
         if (!credDef) {
             throw Error(credDefId + ' : credential definition not found');
         }
+
+        // optionally: find revocation registry
         const revocRegId = credDef.revocRegId;
-        let blobStorageReaderHandle = null;
-        const useRevocations = revocRegId && revocRegId.length > 0;
-
-        if (useRevocations) {
-            const revReg = await RevReg.findOne({ revocRegDefId: revocRegId }).exec();
-
-            const filename = lib.revocationRegistry.tailsBaseDir + '/' + revReg.hash;
-
-            await new Promise((resolve, reject) => {
-                fs.writeFile(filename, revReg.tails, err => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve();
-                    }
-                });
-            });
-
-            blobStorageReaderHandle = await lib.revocationRegistry.openBlobStorageReader({
-                base_dir: lib.revocationRegistry.tailsBaseDir,
-                uri_pattern: ''
-            });
+        let revocReg = null;
+        if (revocRegId) {
+            const revocReg = RevReg.findOne({ revocRegDefId: revocRegId }).exec();
+            if (!revocReg) {
+                throw Error('Revocation registry not found for ' + revocRegId);
+            }
         }
 
-        const [credential, credRevocId, revocRegDelta] = await lib.sdk.issuerCreateCredential(
-            wallet.handle,
-            credentialRequest.meta.offer,
-            credentialRequest.message.message,
+        const [credential, credRevocId, revocRegDelta] = lib.credential.issuerCreateCredential(
+            wallet,
+            credentialRequest,
             credentialValues,
-            revocRegId,
-            blobStorageReaderHandle
+            revocReg
         );
-
-        if (useRevocations) {
-            // store new value of the accumulator
-            await pool.revocRegEntryRequest(
-                wallet.handle,
-                wallet.ownDid,
-                revocRegId,
-                lib.revocationRegistry.revocationType,
-                revocRegDelta
-            );
-        }
 
         const meta = {
             revocRegId: revocRegId,
