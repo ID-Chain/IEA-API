@@ -88,7 +88,7 @@ module.exports = {
             }
         }
 
-        const [credential, credRevocId, revocRegDelta] = lib.credential.issuerCreateCredential(
+        const [credential, credRevocId, revocRegDelta] = await lib.credential.issuerCreateCredential(
             wallet,
             credentialRequest,
             credentialValues,

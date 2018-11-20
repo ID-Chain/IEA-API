@@ -25,7 +25,6 @@ module.exports = {
             req.wallet.ownDid,
             schemaId,
             tag,
-            lib.credentialdefinition.DefaultSignatureType,
             supportRevocation
         );
 
