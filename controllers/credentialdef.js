@@ -59,9 +59,9 @@ module.exports = {
                 blobStorageWriter
             );
 
-            let tailsFileLocation = revocRegDef['tailsLocation'];
+            let tailsFileLocation = revocRegDef.value.tailsLocation;
             // change the URL of tails from file path to the context path
-            revocRegDef['tailsLocation'] = '/tails/' + revocRegId + '/';
+            revocRegDef.value.tailsLocation = '/tails/' + revocRegId + '/';
             // store resulting revocation registry definition to the ledger
             await pool.revocRegDefRequest(req.wallet.handle, req.wallet.ownDid, revocRegDef);
             // store first value of the accumulator
