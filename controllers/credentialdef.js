@@ -76,12 +76,12 @@ module.exports = {
             doc.revocRegType = revocRegDef.revocDefType;
 
             tailsdoc.revocRegId = revocRegId;
-            tailsdoc.hash = revocRegDef['tailsHash'];
+            tailsdoc.hash = revocRegDef.value.tailsHash;
             // foreign key
             tailsdoc.credDefId = credDefId;
 
             // read back the tails from the file created by blobstoragewriter
-            tailsdoc.data = fs.readFileSync(tailsFileLocation);
+            tailsdoc.tails = fs.readFileSync(tailsFileLocation);
             fs.unlinkSync(tailsFileLocation);
         }
 

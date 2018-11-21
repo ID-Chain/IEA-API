@@ -22,7 +22,7 @@ const schema = new Mongoose.Schema({
     hash: {
         type: String
     },
-    tails: Mixed
+    tails: String
 });
 
 module.exports = Mongoose.model('RevocationRegistry', schema);

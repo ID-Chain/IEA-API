@@ -82,7 +82,7 @@ module.exports = {
         const revocRegId = credDef.revocRegId;
         let revocReg = null;
         if (revocRegId) {
-            const revocReg = RevReg.findOne({ revocRegDefId: revocRegId }).exec();
+            revocReg = await RevReg.findOne({ revocRegId: revocRegId }).exec();
             if (!revocReg) {
                 throw Error('Revocation registry not found for ' + revocRegId);
             }
