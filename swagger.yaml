@@ -1,7 +1,12 @@
 swagger: '2.0'
 info:
-  description: 'IdentityChain Agent REST API'
+  description: |
+    # IdentityChain Agent REST API
   title: 'IdentityChain API'
+  x-logo:
+    url: https://www.snet.tu-berlin.de/fileadmin/fg220/logos/Logo_IDChain.png
+    backgroundColor: '#fefefe'
+    altText: 'IdentityChain'
   version: '0.2.0'
 schemes:
   - http
