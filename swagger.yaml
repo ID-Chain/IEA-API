@@ -1795,6 +1795,26 @@ paths:
         - connection
         - issuer
         - verifier
+      x-code-samples:
+        - lang: JSON
+          label: Defaults
+          source: |
+            { }
+        - lang: JSON
+          label: With Wallet and endpoint
+          source: |
+            {
+              "wallet": "c8fd81fb-b8b5-43fb-96f5-051b8b827480",
+              "endpoint": "<did-endpoint>"
+            }
+        - lang: JSON
+          label: Offer Invitee Role
+          source: |
+            {
+              "wallet": "c8fd81fb-b8b5-43fb-96f5-051b8b827480",
+              "endpoint": "<did-endpoint>",
+              "role": "TRUSTEE",
+            }
 
   /api/connectionoffer/{connectionOfferId}:
     parameters:
@@ -1887,6 +1907,28 @@ paths:
         - issuer
         - verifier
         - prover
+      x-code-samples:
+        - lang: JSON
+          label: Accept Connection Offer
+          source: |
+            // All fields are optional
+            { }
+        - lang: JSON
+          label: Send Connection Offer
+          source: |
+            {
+              "connectionOffer": {
+                "id": "c8fd81fb-b8b5-43fb-96f5-051b8b827480",
+                "type": "urn:sovrin:agent:message_type:sovrin.org/connection_offer",
+                "message": {
+                  "did": "endpointDid",     // Required only if endpoint not stored in ledger
+                  "verkey": "endpointVk",   // Required if Endpoint DID not stored on Ledger or has no diddoc
+                  "endpoint": "endpointAddress",
+                  "nonce": "09348295728957894752397589247589247589",
+                  "data": { }
+                }
+              }
+            }
 
   /api/connectionrequest/{connectionRequestId}:
     parameters:
@@ -1957,6 +1999,20 @@ paths:
         - issuer
         - verifier
         - prover
+      x-code-samples:
+        - lang: JSON
+          label: Accept Connection
+          source: |
+            {
+              "connectionId": "5b7ddce00000000000000000"
+            }
+        - lang: JSON
+          label: Accept Connection With Wallet ID
+          source: |
+            {
+              "wallet": "3149c5c3-fccb-484f-a709-4cba84702b21",
+              "connectionId": "5b7ddce00000000000000000"
+            }
 
   /api/indyschema:
     get:
@@ -2000,6 +2056,15 @@ paths:
       tags:
         - indyschema
         - issuer
+      x-code-samples:
+        - lang: JSON
+          label: Sample
+          source: |
+            {
+              "name": "my-custom-schema",
+              "version": "0.1",
+              "attrNames": [ "name", "age", "phone" ]
+            }
 
   /api/indyschema/{schemaid}:
     parameters:
@@ -2547,6 +2612,24 @@ paths:
       tags:
         - proof
         - verifier
+      x-code-samples:
+        - lang: JSON
+          label: Sample Ticket
+          source: |
+            // Note that we can insert mustache placeholders
+            {
+              "template": {
+                "name": "Ticket",
+                "version": "0.1",
+                "requested_attributes": {
+                  "referent": {
+                    "name": "firstname",
+                    "restrictions": [{ "cred_def_id": "{{ cred_def_id }}" }]
+                  },
+                  "attr2_referent": { "name": "phone" }
+                }
+              }
+            }
 
   /api/proofrequesttemplate/{id}:
     parameters:
@@ -2587,6 +2670,24 @@ paths:
       tags:
         - proof
         - verifier
+      x-code-samples:
+        - lang: JSON
+          label: Sample Ticket
+          source: |
+            // Note that we can insert mustache placeholders
+            {
+              "template": {
+                "name": "Ticket",
+                "version": "0.1",
+                "requested_attributes": {
+                  "referent": {
+                    "name": "firstname",
+                    "restrictions": [{ "cred_def_id": "{{ cred_def_id }}" }]
+                  },
+                  "attr2_referent": { "name": "phone" }
+                }
+              }
+            }
     delete:
       summary: 'Delete a proof request template'
       description: 'Delete a proof request template'
@@ -2644,6 +2745,26 @@ paths:
       tags:
         - proof
         - verifier
+      x-code-samples:
+        - lang: JSON
+          label: Without Template Values
+          source: |
+            {
+              "recipientDid": "did:example:123456789abcdefghi",
+              "proofRequest": "507f191e810c19729de860ea",
+            }
+        - lang: JSON
+          label: With Template Values
+          source: |
+            {
+              "recipientDid": "did:example:123456789abcdefghi",
+              "proofRequest": "507f191e810c19729de860ea",
+              "templateValues": {
+                "cred_def_id": "VPKnyQy9yo4oy344YtAUcb:3:CL:485",
+                "age": 18,
+                "citizen": true
+              }
+            }
 
   /api/proofrequest/{id}:
     parameters:
@@ -2726,6 +2847,22 @@ paths:
       tags:
         - proof
         - prover
+      x-code-samples:
+        - lang: JSON
+          label: Without Values
+          source: |
+            {
+              "proofRequestId": "23581013dsfd15"
+            }
+        - lang: JSON
+          label: With Values
+          source: |
+            {
+              "proofRequestId": "23581013dsfd15",
+              "values": {
+                "age": 19
+              }
+            }
 
   /api/proof/{id}:
     parameters:
