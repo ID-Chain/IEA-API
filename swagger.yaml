@@ -1368,6 +1368,14 @@ paths:
         - issuer
         - verifier
         - prover
+      x-code-samples:
+        - lang: JSON
+          label: Issuer
+          source: |
+            {
+              "username": "issuer",
+              "password": "dummy"
+            }
 
   /api/user:
     post:
@@ -1400,6 +1408,14 @@ paths:
         - issuer
         - verifier
         - prover
+      x-code-samples:
+        - lang: JSON
+          label: New User
+          source: |
+            {
+              "username": "testuser",
+              "password": "securepassword"
+            }
 
   /api/user/{user}:
     parameters:
@@ -1449,6 +1465,25 @@ paths:
         - issuer
         - verifier
         - prover
+      x-code-samples:
+        - lang: JSON
+          label: New Username
+          source: |
+            {
+              "username": "testuser"
+            }
+        - lang: JSON
+          label: New Password
+          source: |
+            {
+              "password": "somenewpassword"
+            }
+        - lang: JSON
+          label: wallet
+          source: |
+            {
+              "wallet": "<new-wallet-id>"
+            }
     delete:
       summary: 'Delete a User'
       description: 'Delete a User'
@@ -1514,6 +1549,21 @@ paths:
         - issuer
         - verifier
         - prover
+      x-code-samples:
+        - lang: JSON
+          label: Use Defaults
+          source: |
+            {
+              "credentials": { }
+            }
+        - lang: JSON
+          label: Provide values
+          source: |
+            {
+              "name": "9c79f5e8-acec-451f-9eb9-49fc6ee02b11",
+              "credentials": { },
+              "seed": "my-wallet-seed"
+            }
 
   /api/wallet/{wallet}:
     parameters:
