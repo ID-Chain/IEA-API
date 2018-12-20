@@ -2212,6 +2212,13 @@ paths:
           description: 'Successfully altered schema'
         422:
           description: 'Schema does not support revocations, or is already revoked'
+      x-code-samples:
+        - lang: JSON
+          label: Revoke Request
+          source: |
+            {
+              "operation": "revoke"
+            }
 
   /api/attribute/type:
     get:
