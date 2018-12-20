@@ -2274,6 +2274,21 @@ paths:
       tags:
         - credential
         - issuer
+      x-code-samples:
+        - lang: JSON
+          label: Basic Definition
+          source: |
+            {
+              "schemaId": "Th7MpTaRZVRYnPiabds81Y:2:ID_NL:2.0"
+            }
+        - lang: JSON
+          label: With Tag & Revocation
+          source: |
+            {
+              "schemaId": "Th7MpTaRZVRYnPiabds81Y:2:ID_NL:2.0",
+              "tag": "Company_Registration",
+              "supportRevocation": "true"
+            }
 
   /api/credentialdef/{creddef}:
     parameters:
@@ -2342,6 +2357,22 @@ paths:
       tags:
         - credential
         - issuer
+      x-code-samples:
+        - lang: JSON
+          label: Basic Request
+          source: |
+            {
+              "recipientDid": "did:example:123456789abcdefghi",
+              "credDefId": "Th7MpTaRZVRYnPiabds81Y:2:ID_NL:2.0"
+            }
+        - lang: JSON
+          label: With Credential Location
+          source: |
+            {
+              "recipientDid": "did:example:123456789abcdefghi",
+              "credDefId": "Th7MpTaRZVRYnPiabds81Y:2:ID_NL:2.0",
+              "credentialLocation": "https://www.example.com/creds-kv-pair/mycreds"
+            }
 
   /api/credentialoffer/{id}:
     parameters:
@@ -2425,6 +2456,13 @@ paths:
       tags:
         - credential
         - issuer
+      x-code-samples:
+        - lang: JSON
+          label: Basic Request
+          source: |
+            {
+              "credentialOfferId": "12518093odsfjods125"
+            }
 
   /api/credentialrequest/{id}:
     parameters:
@@ -2511,6 +2549,17 @@ paths:
       tags:
         - credential
         - issuer
+      x-code-samples:
+        - lang: JSON
+          label: Basic Request
+          source: |
+            {
+              "credentialRequestId": "12518093odsfjods125",
+              "values": {
+                "age": 19,
+                "name": "John"
+              }
+            }
 
   /api/credential/{id}:
     parameters:
@@ -2960,6 +3009,14 @@ paths:
           $ref: '#/responses/not_found'
       tags:
         - transaction
+      x-code-samples:
+        - lang: JSON
+          label: Basic Request
+          source: |
+            {
+              "did": "did:example:123456789abcdefghi",
+              "verkey": "125dsfa2a3135d"
+            }
 
   /api/nym/{did}:
     get:
@@ -3003,6 +3060,13 @@ paths:
           $ref: '#/responses/not_found'
       tags:
         - message
+      x-code-samples:
+        - lang: JSON
+          label: Sample Request
+          source: |
+            {
+              "message": "aGVsbG8gd29ybGQK"
+            }
 
   /api/message/:
     get:
@@ -3053,6 +3117,14 @@ paths:
           $ref: '#/responses/not_found'
       tags:
         - message
+      x-code-samples:
+        - lang: JSON
+          label: Sample Request
+          source: |
+            {
+              "did": "did:example:123456789abcdefghi",
+              "message": "aGVsbG8gd29ybGQK"
+            }
 
   /api/message/{messageId}:
     parameters:
