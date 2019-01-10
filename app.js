@@ -55,12 +55,13 @@ async function initialize() {
 
 initialize()
     .then(() => {
-        const server = app.listen(process.env.APP_PORT, process.env.APP_HOST, async () => {
+        const server = app.listen(process.env.IDCHAIN_APP_PORT, process.env.IDCHAIN_APP_HOST, async () => {
             log.info('IDChain API now up at %s:%s', server.address().address, server.address().port);
             log.info('Access APIDocs at /api/docs');
         });
     })
     .catch(err => {
+        console.log('---> I encountered an error: ', err);
         log.error(err);
         process.exit(1);
     });

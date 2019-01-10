@@ -7,33 +7,33 @@
 # ===============================================
 
 # host and port the API binds to
-APP_HOST=172.16.0.100
-APP_PORT=8000
+IDCHAIN_APP_HOST=172.16.0.100
+IDCHAIN_APP_PORT=8000
 
 # protocol (http/s), host, and port at which the API is
 # reachable from the outside
-APP_DOMAIN_PROTOCOL=http
-APP_DOMAIN_HOST=172.16.0.100
-APP_DOMAIN_PORT=8000
+IDCHAIN_APP_DOMAIN_PROTOCOL=http
+IDCHAIN_APP_DOMAIN_HOST=172.16.0.100
+IDCHAIN_APP_DOMAIN_PORT=8000
 
 # wallet cache ttl, e.g. how long to wait before closing
 # a wallet after no request is using it anymore for processing
 # (in minutes)
-APP_WALLETCACHE_TTL=15
+IDCHAIN_APP_WALLETCACHE_TTL=15
 
 # whether to always write pairwise dids onto the ledger per nym request
 # by default pairwise dids are only stored locally and not stored on the ledger
 # except when a role other than NONE is offered
-APP_NYM_ALWAYS=false
+IDCHAIN_APP_NYM_ALWAYS=false
 
 # bcrypt saltOrRounds configuration
-SALTROUNDS=10
+IDCHAIN_SALTROUNDS=10
 
 # change this!
-JWT_SECRET=your_jwt_secret
+IDCHAIN_JWT_SECRET=your_jwt_secret
 
 # API logger log level
-LOG_LEVEL=debug
+IDCHAIN_LOG_LEVEL=debug
 
 # low-level rust indy-sdk/libindy log level
 RUST_LOG=debug
@@ -61,7 +61,7 @@ POOL_IP=172.16.0.200
 POOL_NAME=testPool
 
 # path to pool_transactions_genesis
-GENESIS_TXN=./pool_transactions_genesis
+IDCHAIN_GENESIS_TXN=./pool_transactions_genesis
 
 # Schema compiler api
 # ===============================================

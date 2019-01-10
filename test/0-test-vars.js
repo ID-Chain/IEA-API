@@ -6,7 +6,7 @@
 const config = require('../config');
 const supertest = require('supertest');
 
-module.exports.serverURL = `http://${process.env.APP_HOST}:${process.env.APP_PORT}`;
+module.exports.serverURL = `http://${process.env.IDCHAIN_APP_HOST}:${process.env.IDCHAIN_APP_PORT}`;
 module.exports.agent = supertest(module.exports.serverURL);
 
 module.exports.acceptHeader = { Accept: 'application/json' };

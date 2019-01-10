@@ -45,31 +45,31 @@ services:
     image: idchain/api
     container_name: idchain-api
     environment:
-      - APP_HOST
-      - APP_PORT
-      - APP_DOMAIN_PROTOCOL
-      - APP_DOMAIN_HOST
-      - APP_DOMAIN_PORT
-      - APP_NYM_ALWAYS
-      - JWT_SECRET
-      - DB_HOST
-      - DB_PORT
-      - DB_USER
-      - DB_PASSWORD
-      - SALTROUNDS
+      - IDCHAIN_APP_HOST
+      - IDCHAIN_APP_PORT
+      - IDCHAIN_APP_DOMAIN_PROTOCOL
+      - IDCHAIN_APP_DOMAIN_HOST
+      - IDCHAIN_APP_DOMAIN_PORT
+      - IDCHAIN_APP_NYM_ALWAYS
+      - IDCHAIN_JWT_SECRET
+      - IDCHAIN_DB_HOST
+      - IDCHAIN_DB_PORT
+      - IDCHAIN_DB_USER
+      - IDCHAIN_DB_PASSWORD
+      - IDCHAIN_SALTROUNDS
       - POOL_IP
       - POOL_NAME
-      - GENESIS_TXN
-      - LOG_LEVEL
+      - IDCHAIN_GENESIS_TXN
+      - IDCHAIN_LOG_LEVEL
       - RUST_LOG
       - SCHEMA_COMP_HOST
       - SCHEMA_COMP_PORT
     ports:
-      - ${APP_PORT}:${APP_PORT}
+      - ${IDCHAIN_APP_PORT}:${IDCHAIN_APP_PORT}
     depends_on:
       - mongodb
       - pool
       - schemac
     networks:
       indy-network:
-        ipv4_address: ${APP_HOST}
+        ipv4_address: ${IDCHAIN_APP_HOST}
