@@ -14,7 +14,8 @@ const User = require('../models/user');
 
 const jwtOptions = {
     jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-    secretOrKey: process.env.IDC_API_JWT_SECRET
+    secretOrKey: process.env.IDC_API_JWT_SECRET,
+    ignoreExpiration: (process.env.IDC_API_JWT_IGNORE_EXPIRATION || 'false') === 'true'
 };
 
 passport.use(
